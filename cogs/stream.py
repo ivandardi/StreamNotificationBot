@@ -354,8 +354,10 @@ class Notifications:
         if service == 'twitch':
             params = {'client_id': self.key_twitch}
             async with self.client.get(f'https://api.twitch.tv/kraken/streams/{username}', params=params) as r:
-                if r.status == 200:
-                    stream = await r.json()
+                if r.status != 200:
+                    return False
+
+                stream = await r.json()
                 return stream['stream'] is not None if 'stream' in stream else False
 
         if service == 'youtube':
@@ -366,13 +368,16 @@ class Notifications:
                 'part': 'id',
             }
             async with self.client.get('https://www.googleapis.com/youtube/v3/channels', params=params) as r:
-                if r.status == 200:
-                    info = await r.json()
-                    if info['pageInfo']['totalResults'] <= 0:
-                        return False
+                if r.status != 200:
+                    return False
+
+                info = await r.json()
+                if info['pageInfo']['totalResults'] <= 0:
+                    return False
 
                 # We can access the streamer ID
                 streamer_id = info['items'][0]['id']
+
 
             # Get stream info
             params = {
