@@ -1,5 +1,6 @@
 import json
 import logging
+from logging.handlers import TimedRotatingFileHandler
 
 from discord.ext import commands
 
@@ -13,14 +14,21 @@ initial_extensions = [
 
 
 def setup_logger(name: str):
-    handler = logging.FileHandler(filename='logging.log', encoding='utf-8', mode='w')
-
     formatter = logging.Formatter(fmt='%(asctime)s [%(levelname)s] %(module)s - %(message)s')
-    handler.setFormatter(formatter)
+
+    rotating_handler = TimedRotatingFileHandler(filename='logs/logging.log', encoding='utf-8', when='midnight',
+                                                backupCount=7, utc=True)
+    rotating_handler.setFormatter(formatter)
+
+    stream_handler = logging.StreamHandler()
+    stream_handler.setFormatter(formatter)
 
     log = logging.getLogger(name)
     log.setLevel(logging.DEBUG)
-    log.addHandler(handler)
+
+    log.addHandler(rotating_handler)
+    log.addHandler(stream_handler)
+
     return log
 
 
