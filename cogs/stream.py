@@ -291,8 +291,7 @@ class Notifications:
         try:
             params = {'key': self.key_picarto}
             async with self.client.get('https://api.picarto.tv/online/all', params=params) as r:
-                if r.status == 200:
-                    pstreams = await r.json()
+                pstreams = await r.json() if r.status == 200 else None
         except Exception as e:
             # Probably reached the 3000 checks/day limit
             log.exception(f'_check_and_notify: {type(e).__name__}: {e}')
