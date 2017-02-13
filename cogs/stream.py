@@ -370,12 +370,12 @@ class Notifications:
                 if r.status != 200:
                     return False
 
-                info = await r.json()
-                if info['pageInfo']['totalResults'] <= 0:
+                response = await r.json()
+                if response['pageInfo']['totalResults'] <= 0:
                     return False
 
                 # We can access the streamer ID
-                streamer_id = info['items'][0]['id']
+                streamer_id = response['items'][0]['id']
 
 
             # Get stream info
@@ -388,8 +388,8 @@ class Notifications:
             }
             async with self.client.get('https://www.googleapis.com/youtube/v3/search', params=params) as r:
                 if r.status == 200:
-                    info = await r.json()
-                    return info['pageInfo']['totalResults'] > 0
+                    response = await r.json()
+                    return response['pageInfo']['totalResults'] > 0
 
         return False
 
