@@ -1,4 +1,4 @@
-# StreamNotificationBotRewrite
+# Stream Notification Bot
 
 A bot that notifies you when your favorite streamers go online!
 
