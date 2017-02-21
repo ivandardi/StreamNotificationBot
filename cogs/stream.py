@@ -46,13 +46,13 @@ class Notifications:
 
     == How to add a streamer to your notification list ==
 
-    `snb?add <service> <username>`
-    Example: `snb?add picarto mykegreywolf`
+    snb?add <service> <username>
+    Example: snb?add picarto mykegreywolf
 
      == How to delete a streamer to your notification list ==
 
-    `snb?del <service> <username>`
-    Example: `snb?del picarto mykegreywolf`
+    snb?del <service> <username>
+    Example: snb?del picarto mykegreywolf
 
     """
 
@@ -85,15 +85,15 @@ class Notifications:
 
         == How to add a streamer to your notification list ==
 
-        `snb?add <service> <username>`
+        snb?add <service> <username>
 
-        Example: `snb?add picarto mykegreywolf`
+        Example: snb?add picarto mykegreywolf
 
         == How to add a streamer to a channel's notification list ==
 
-        `snb?add <service> <username> <channel>`
+        snb?add <service> <username> <channel>
 
-        Example: `snb?add picarto mykegreywolf #general`
+        Example: snb?add picarto mykegreywolf #general
 
         NOTE: You can only subscribe a channel if you have the manage_channels permission!
 
@@ -115,8 +115,8 @@ class Notifications:
         except database.InvalidServiceError:
             log.warning(f'Command add: Invalid service {service}.')
             await ctx.send(f'Invalid service.\n\nPlease take note of the proper format:\n\n'
-                           '`snb?add <service> <username>`\n\n'
-                           'Example: `snb?add picarto mykegreywolf`')
+                           'snb?add <service> <username>\n\n'
+                           'Example: snb?add picarto mykegreywolf')
         except database.InvalidUsernameError:
             log.warning(f'Command add: Invalid username {username}.')
             await ctx.send(f'Invalid username {username}.')
@@ -144,14 +144,14 @@ class Notifications:
 
         == How to delete a streamer to your notification list ==
 
-        `snb?del <service> <username>`
-        Example: `snb?del picarto mykegreywolf`
+        snb?del <service> <username>
+        Example: snb?del picarto mykegreywolf
 
         == How to delete a streamer to a channel's notification list ==
 
-        `snb?del <service> <username> <channel>`
+        snb?del <service> <username> <channel>
 
-        Example: `snb?del picarto mykegreywolf #general`
+        Example: snb?del picarto mykegreywolf #general
 
         NOTE: You can only unsubscribe a channel if you have the manage_channels permission!
 
@@ -168,8 +168,8 @@ class Notifications:
         except database.InvalidServiceError:
             log.warning(f'Command del: Invalid service {service}.')
             await ctx.send(f'Invalid service.\n\nPlease take note of the proper format:\n\n'
-                           '`snb?del <service> <username>`\n\n'
-                           'Example: `snb?del picarto mykegreywolf`')
+                           'snb?del <service> <username>\n\n'
+                           'Example: snb?del picarto mykegreywolf')
         except database.InvalidUsernameError:
             log.warning(f'Command del: Invalid username {username}.')
             await ctx.send(f'Invalid username {username}.')

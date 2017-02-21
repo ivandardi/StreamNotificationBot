@@ -19,14 +19,14 @@ Currently supported services: Twitch, Youtube and Picarto.
 
 To add a streamer to your subscription list, use the following command:
 
-`snb?add <service> <username>`
-Example: `snb?add picarto mykegreywolf`
+snb?add <service> <username>
+Example: snb?add picarto mykegreywolf
 
-For more help about any command, type `snb?help <command>`.
+For more help about any command, type snb?help <command>.
 Examples:
-`snb?help add`
-`snb?help del`
-`snb?help list`
+snb?help add
+snb?help del
+snb?help list
 
 ==== COMMANDS ====
 

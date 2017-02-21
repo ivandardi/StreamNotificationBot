@@ -35,7 +35,7 @@ class Admin:
             channel = self.bot.get_channel(channel_id)
             await channel.send(message)
 
-    @commands.command()
+    @commands.command(hidden=True)
     @checks.is_owner()
     async def info(self, ctx):
         """Provides some info about the bot.
@@ -45,7 +45,7 @@ class Admin:
 
         await ctx.send('\n'.join([guild.name for guild in ctx.bot.guilds]))
 
-    @commands.command(name='reload')
+    @commands.command(name='reload', hidden=True)
     @checks.is_owner()
     async def _reload(self, ctx, *, module: str = None):
         """Reloads a module."""
