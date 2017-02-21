@@ -198,8 +198,11 @@ class Notifications:
 
         subscriptions = database.get_subscriptions_from_subscriber(subscriber_id).fetchall()
 
-        service_list = {k: '\n'.join(username for username, service in subscriptions if service == k) for k in
-                        self.services.keys()}
+        service_list = {
+            k: '\n'.join(f'[{username}]({self.services[service].stream_url.format(username)})'
+                         for username, service in subscriptions if service == k)
+            for k in self.services.keys()
+        }
 
         embed = discord.Embed(color=Color.blue())
         embed.set_author(name='Subscriptions')
