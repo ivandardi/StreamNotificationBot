@@ -12,14 +12,30 @@ from utils.misc import credentials
 log = logging.getLogger('stream_notif_bot')
 
 
-def validate_notification_channel(ctx: commands.Context, channel: discord.abc.GuildChannel):
+async def validate_notification_channel(ctx: commands.Context, channel: discord.abc.GuildChannel):
+    """Returns True if channel is valid"""
+
+    # If there's no channel, then it will just list the user subscriptions
     if not channel:
         return True
 
+    # If there isn't a guild aka it's a PrivateGuild
     if not ctx.guild:
+        await ctx.send('This command doesn\'t work here.')
         return False
 
-    return discord.utils.find(lambda c: c == channel, ctx.guild.text_channels) is not None
+    # Only people with manage_channels can subscribe channels
+    perms = channel.permissions_for(ctx.author)
+    if not perms.manage_channels:
+        await ctx.send('You don\'t have enough permissions to subscribe a channel.')
+        return False
+
+    # If channel doesn't belong to the list of text_channels of the guild
+    if not discord.utils.find(lambda c: c == channel, ctx.guild.text_channels):
+        await ctx.send('This channel doesn\'t belong to this guild.')
+        return False
+
+    return True
 
 
 class Notifications:
@@ -79,10 +95,11 @@ class Notifications:
 
         Example: `snb?add picarto mykegreywolf #general`
 
+        NOTE: You can only subscribe a channel if you have the manage_channels permission!
+
         """
 
-        if not validate_notification_channel(ctx, notification_channel):
-            await ctx.send('This channel doesn\'t belong to this guild.')
+        if not await validate_notification_channel(ctx, notification_channel):
             return
 
         subscriber = ctx.author if not notification_channel else notification_channel
@@ -136,10 +153,11 @@ class Notifications:
 
         Example: `snb?del picarto mykegreywolf #general`
 
+        NOTE: You can only unsubscribe a channel if you have the manage_channels permission!
+
         """
 
-        if not validate_notification_channel(ctx, notification_channel):
-            await ctx.send('This channel doesn\'t belong to this guild.')
+        if not await validate_notification_channel(ctx, notification_channel):
             return
 
         channel = ctx.author if not notification_channel else notification_channel
@@ -171,8 +189,7 @@ class Notifications:
 
         """
 
-        if not validate_notification_channel(ctx, notification_channel):
-            await ctx.send('This channel doesn\'t belong to this guild.')
+        if not await validate_notification_channel(ctx, notification_channel):
             return
 
         channel = ctx.author if not notification_channel else notification_channel
