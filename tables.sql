@@ -1,18 +1,24 @@
-CREATE TABLE IF NOT EXISTS users (
-  user_id    sqlite3_uint64 PRIMARY KEY,
-  channel_id sqlite3_uint64 NOT NULL
+CREATE TABLE IF NOT EXISTS subscribers (
+  subscriber_id TEXT PRIMARY KEY,
+  channel_id    TEXT NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS streamers (
   streamer_id INTEGER PRIMARY KEY AUTOINCREMENT,
-  username    TEXT    NOT NULL,
+  service_id  TEXT    NOT NULL,
   service     TEXT    NOT NULL,
-  is_online   BOOLEAN NOT NULL CHECK (is_online IN (0, 1)) DEFAULT 0,
-  UNIQUE (username, service)
+  username    TEXT    NOT NULL,
+  is_online   INTEGER NOT NULL CHECK (is_online IN (0, 1)) DEFAULT 0,
+  UNIQUE (service, username)
 );
 
 CREATE TABLE IF NOT EXISTS subscriptions (
-  user_id     sqlite3_uint64 REFERENCES users     (user_id)     ON DELETE CASCADE,
-  streamer_id INTEGER        REFERENCES streamers (streamer_id) ON DELETE CASCADE,
-  PRIMARY KEY (user_id, streamer_id)
+  subscriber_id TEXT    REFERENCES subscribers (subscriber_id),
+  streamer_id   INTEGER REFERENCES streamers   (streamer_id),
+  PRIMARY KEY (subscriber_id, streamer_id)
+);
+
+CREATE TABLE IF NOT EXISTS prefixes (
+  guild_id TEXT NOT NULL PRIMARY KEY,
+  prefix   TEXT NOT NULL
 );

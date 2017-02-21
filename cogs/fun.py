@@ -2,20 +2,29 @@ import random
 
 from discord.ext import commands
 
+from notification import httpclient
+
 
 class Fun:
-    def __init__(self, bot: commands.Bot):
+    def __init__(self, bot):
         self.bot = bot
-        with open('why.txt', encoding='utf8') as f:
-            self.why_list = list(f)
+        self.why_list = None
 
-    @commands.command(pass_context=True)
-    async def why(self, ctx: commands.context.Context):
+    @commands.command()
+    async def why(self, ctx):
         """why
+
+        DISCLAIMER: This command fetches from https://xkcd.com/why.txt .
+        I am not responsible for anything that this command outputs.
 
         """
 
-        await self.bot.send_message(ctx.message.channel, random.choice(self.why_list))
+        if not self.why_list:
+            async with httpclient.client.get('https://xkcd.com/why.txt') as r:
+                self.why_list = await r.text()
+                self.why_list = self.why_list.split('\n')
+
+        await ctx.send(random.choice(self.why_list))
 
 
 def setup(bot):

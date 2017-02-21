@@ -6,7 +6,21 @@ from contextlib import redirect_stdout
 import discord
 from discord.ext import commands
 
-import util
+from utils import checks
+
+
+def cleanup_code(content):
+    """Automatically removes code blocks from the code."""
+    # remove ```py\n```
+    if content.startswith('```') and content.endswith('```'):
+        return '\n'.join(content.split('\n')[1:-1])
+
+    # remove `foo`
+    return content.strip('` \n')
+
+
+def get_syntax_error(e):
+    return '```py\n{0.text}{1:>{0.offset}}\n{2}: {0}```'.format(e, '^', type(e).__name__)
 
 
 class REPL:
@@ -14,47 +28,34 @@ class REPL:
         self.bot = bot
         self.sessions = set()
 
-    def cleanup_code(self, content):
-        """Automatically removes code blocks from the code."""
-        # remove ```py\n```
-        if content.startswith('```') and content.endswith('```'):
-            return '\n'.join(content.split('\n')[1:-1])
-
-        # remove `foo`
-        return content.strip('` \n')
-
-    def get_syntax_error(self, e):
-        return '```py\n{0.text}{1:>{0.offset}}\n{2}: {0}```'.format(e, '^', type(e).__name__)
-
-    @commands.command(pass_context=True, hidden=True)
-    @util.is_owner()
-    async def repl(self, ctx: commands.context.Context):
+    @commands.command(hidden=True)
+    @checks.is_owner()
+    async def repl(self, ctx):
         msg = ctx.message
 
         variables = {
-            'ctx': ctx,
             'bot': self.bot,
+            'ctx': ctx,
             'msg': msg,
-            'srv': msg.server,
+            'gld': msg.guild,
             'cnl': msg.channel,
             'ath': msg.author,
-            '_': None,
         }
 
         if msg.channel.id in self.sessions:
-            await self.bot.say('Already running a REPL session in this channel. Exit it with `quit`.')
+            await ctx.send('Already running a REPL session in this channel. Exit it with `quit`.')
             return
 
         self.sessions.add(msg.channel.id)
-        await self.bot.say('Enter code to execute or evaluate. `exit()` or `quit` to exit.')
+        await ctx.send('Enter code to execute or evaluate. `exit()` or `quit` to exit.')
         while True:
             response = await self.bot.wait_for_message(author=msg.author, channel=msg.channel,
                                                        check=lambda m: m.content.startswith('`'))
 
-            cleaned = self.cleanup_code(response.content)
+            cleaned = cleanup_code(response.content)
 
             if cleaned in ('quit', 'exit', 'exit()'):
-                await self.bot.say('Exiting.')
+                await ctx.send('Exiting.')
                 self.sessions.remove(msg.channel.id)
                 return
 
@@ -72,7 +73,7 @@ class REPL:
                 try:
                     code = compile(cleaned, '<repl session>', 'exec')
                 except SyntaxError as e:
-                    await self.bot.say(self.get_syntax_error(e))
+                    await ctx.send(get_syntax_error(e))
                     continue
 
             variables['message'] = response

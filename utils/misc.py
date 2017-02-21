@@ -2,8 +2,6 @@ import json
 import logging
 from logging.handlers import TimedRotatingFileHandler
 
-from discord.ext import commands
-
 initial_extensions = [
     'cogs.admin',
     'cogs.fun',
@@ -11,6 +9,9 @@ initial_extensions = [
     'cogs.repl',
     'cogs.stream',
 ]
+
+with open('credentials.json') as f:
+    credentials = json.load(f)
 
 
 def setup_logger(name: str):
@@ -30,16 +31,3 @@ def setup_logger(name: str):
     log.addHandler(stream_handler)
 
     return log
-
-
-def load_credentials():
-    with open('credentials.json') as f:
-        return json.load(f)
-
-
-def is_owner_check(message):
-    return message.author.id == '129819557115199488'
-
-
-def is_owner():
-    return commands.check(lambda ctx: is_owner_check(ctx.message))

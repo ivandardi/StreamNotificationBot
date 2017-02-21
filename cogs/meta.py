@@ -1,19 +1,63 @@
 import datetime
+import logging
 
 import discord.utils
 from discord.ext import commands
 from discord.permissions import Permissions
 
+from notification.database import change_prefix
+from utils import checks
+
+log = logging.getLogger('stream_notif_bot')
+
 
 class Meta:
-    def __init__(self, bot: commands.Bot):
+    """Commands that deal with the bot itself."""
+
+    def __init__(self, bot):
         self.bot = bot
 
-    @commands.command()
-    async def uptime(self):
-        """Tells you how long the bot has been up for.
+    @commands.group(name='prefix', invoke_without_command=True)
+    async def prefix(self, ctx):
+        """Returns the current prefixes of the bot."""
 
-        """
+        prefixes = ', '.join(await self.bot.get_prefix(ctx.message))
+        await ctx.send(f'Current prefixes: {prefixes}')
+
+    @prefix.command(aliases=['set'])
+    @commands.has_permissions(manage_guild=True)
+    async def change(self, ctx, prefix: str):
+        """Changes the current prefix of the bot on the current guild."""
+
+        if isinstance(ctx.channel, discord.abc.PrivateChannel):
+            await ctx.send('Can\'t change prefix in a private channel!')
+            return
+
+        try:
+            guild_id = str(ctx.guild.id)
+            change_prefix(guild_id, prefix)
+        except Exception as e:
+            ctx.send('Failed to change prefix.')
+            log.exception('prefix change: ', e)
+        else:
+            ctx.send(f'Prefix successfully changed to {prefix}')
+
+    @commands.command(aliases=['purge, prune'])
+    @checks.is_owner()
+    @commands.has_permissions(manage_messages=True)
+    async def clean(self, ctx, limit: int = 100):
+        """Removes a specified amount of messages from the chat."""
+
+        try:
+            deleted = await ctx.channel.purge(limit=limit, check=lambda m: m.author == self.bot)
+        except:
+            await ctx.send('Failed to delete messages.', delete_after=5)
+        else:
+            await ctx.send(f'Deleted {len(deleted)} message(s)', delete_after=5)
+
+    @commands.command()
+    async def uptime(self, ctx):
+        """Tells how long the bot has been up for."""
 
         now = datetime.datetime.utcnow()
         delta = now - self.bot.uptime
@@ -25,16 +69,13 @@ class Meta:
         if days:
             fmt = '{d}d ' + fmt
 
-        await self.bot.say(f'Uptime: **{fmt.format(d=days, h=hours, m=minutes, s=seconds)}**')
+        await ctx.send(f'Uptime: **{fmt.format(d=days, h=hours, m=minutes, s=seconds)}**')
 
     @commands.command()
-    async def invite(self):
-        """Provides the invite link for the bot.
+    async def invite(self, ctx):
+        """Provides the invite link for the bot."""
 
-        """
-
-        await self.bot.say(
-            f'Invite link: {discord.utils.oauth_url(self.bot.user.id, permissions=Permissions.text())}')
+        await ctx.send(f'Invite link: {discord.utils.oauth_url(self.bot.user.id, permissions=Permissions.text())}')
 
 
 def setup(bot):

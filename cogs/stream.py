@@ -1,41 +1,25 @@
 import asyncio
 import logging
-import re
-import sqlite3
 
-import aiohttp
 import discord
-from discord import Forbidden, NotFound, Colour, InvalidArgument
+from discord import Color
 from discord.ext import commands
-from discord.utils import find
 
-import util
+from notification import database
+from notification import services
+from utils.misc import credentials
 
 log = logging.getLogger('stream_notif_bot')
 
 
-def _get_icon_url(service: str):
-    icon_url = {
-        'picarto': 'https://picarto.tv/images/Picarto_logo.png',
-        'twitch': 'https://i.imgur.com/miKaDpC.png',
-        'youtube': 'https://s-media-cache-ak0.pinimg.com/originals/c2/f0/6e/c2f06ec927ed43a5328ec30b4079da7f.png',
-    }
+def validate_notification_channel(ctx: commands.Context, channel: discord.abc.GuildChannel):
+    if not channel:
+        return True
 
-    return icon_url[service]
+    if not ctx.guild:
+        return False
 
-
-def _get_stream_url(service: str, username: str):
-    service_url = {
-        'picarto': 'https://picarto.tv/{}',
-        'twitch': 'https://twitch.tv/{}',
-        'youtube': 'https://gaming.youtube.com/user/{}/live',
-    }
-
-    return service_url[service].format(username)
-
-
-def is_service_valid(service: str):
-    return service == 'picarto' or service == 'twitch' or service == 'youtube'
+    return discord.utils.find(lambda c: c == channel, ctx.guild.text_channels) is not None
 
 
 class Notifications:
@@ -46,44 +30,35 @@ class Notifications:
 
     == How to add a streamer to your notification list ==
 
-    @StreamNotificationBot add <service> <username>
-    Example: @StreamNotificationBot add picarto mykegreywolf
+    `snb?add <service> <username>`
+    Example: `snb?add picarto mykegreywolf`
 
      == How to delete a streamer to your notification list ==
 
-    @StreamNotificationBot del <service> <username>
-    Example: @StreamNotificationBot del picarto mykegreywolf
+    `snb?del <service> <username>`
+    Example: `snb?del picarto mykegreywolf`
 
     """
 
-    def __init__(self, bot: commands.Bot):
+    def __init__(self, bot):
         self.bot = bot
-        self.db = sqlite3.connect('db.sqlite3') # TODO use PonyORM
-        self.client = aiohttp.ClientSession()
 
-        credentials = util.load_credentials()
-        self.key_picarto = credentials['picarto_API']
-        self.key_twitch = credentials['twitch_API']
-        self.key_youtube = credentials['youtube_API']
+        database.open_database()
+
+        self.services = {
+            'picarto': services.Picarto(credentials['picarto_API']),
+            'twitch': services.Twitch(credentials['twitch_API']),
+            # 'youtube': services.Youtube(credentials['youtube_API']),
+        }
 
         self.task = self.bot.loop.create_task(self._check_streamers())
 
     def __unload(self):
-        log.info('Unloading Notifications cog and closing database...')
-        self.db.close()
         self.task.cancel()
-        self.client.close()
+        database.close_database()
 
-    @commands.command(hidden=True)
-    @util.is_owner()
-    async def broadcast(self, *, message: str):
-        users = self.db.execute('SELECT * FROM users')
-
-        for user_id, channel_id in users:
-            await self.bot.send_message(discord.Object(id=channel_id), message)
-
-    @commands.command(aliases=['subscribe'], pass_context=True)
-    async def add(self, ctx: commands.context.Context, service: str, username: str = None):
+    @commands.command(aliases=['subscribe'])
+    async def add(self, ctx, service=None, username=None, notification_channel: discord.TextChannel = None):
         """Adds a streamer to your notification list.
 
         Supported services: Twitch, Youtube and Picarto.
@@ -94,41 +69,53 @@ class Notifications:
 
         == How to add a streamer to your notification list ==
 
-        @StreamNotificationBot add <service> <username>
-        Example: @StreamNotificationBot add picarto mykegreywolf
+        `snb?add <service> <username>`
+
+        Example: `snb?add picarto mykegreywolf`
+
+        == How to add a streamer to a channel's notification list ==
+
+        `snb?add <service> <username> <channel>`
+
+        Example: `snb?add picarto mykegreywolf #general`
 
         """
 
-        service = service.lower()
-        if not is_service_valid(service) or username is None:
-            await self.bot.send_message(ctx.message.author,
-                                        f'Command error.\n\nPlease take note of the proper format:\n\n'
-                                        '@StreamNotificationBot add <service> <username>\n'
-                                        'Example: @StreamNotificationBot add picarto mykegreywolf')
+        if not validate_notification_channel(ctx, notification_channel):
+            await ctx.send('This channel doesn\'t belong to this guild.')
             return
 
-        username = username.lower()
+        subscriber = ctx.author if not notification_channel else notification_channel
+        subscriber_id = str(subscriber.id)
 
-        if not re.fullmatch(r'^\w{3,24}$', username, re.IGNORECASE):
+        try:
+            channel_id = await self._get_notification_channel_id(subscriber)
+            service = database.validate_service(service)
+
+            await self.services[service].add_subscription(subscriber_id=subscriber_id, channel_id=channel_id,
+                                                          username=username)
+
+        except database.InvalidServiceError:
+            log.warning(f'Command add: Invalid service {service}.')
+            await ctx.send(f'Invalid service.\n\nPlease take note of the proper format:\n\n'
+                           '`snb?add <service> <username>`\n\n'
+                           'Example: `snb?add picarto mykegreywolf`')
+        except database.InvalidUsernameError:
             log.warning(f'Command add: Invalid username {username}.')
-            await self.bot.send_message(ctx.message.author, f'Invalid username {username}.')
-            return
+            await ctx.send(f'Invalid username {username}.')
+        except services.StreamerNotFoundError:
+            log.warning(f'Command add: streamer {username} not found.')
+            await ctx.send(f'The streamer {username} doesn\'t exist.')
+        except Exception as e:
+            log.exception(f'add command exception: {e}')
+            await ctx.send(f'Something bad happened. 😐')
+        else:
+            log.info(f'{subscriber} subscribed to {username}({service})')
+            await ctx.send(
+                f'{subscriber.name} will be notified when `{username}` goes online on {service.capitalize()}!')
 
-        if not ctx.message.channel.is_private:
-            log.warning('Command add: This command only works in private messages!')
-            await self.bot.send_message(ctx.message.author, 'This command only works in private messages!')
-            return
-
-        user_id = self._db_add_user(ctx.message.author.id, ctx.message.channel.id)
-        streamer_id = self._db_add_streamer(service, username)
-        self._db_add_subscription(user_id, streamer_id)
-
-        log.info(f'{ctx.message.author} subscribed to {username}')
-        await self.bot.send_message(ctx.message.author,
-                                    f'You\'ll will be notified when `{username}` goes online!')
-
-    @commands.command(name='del', aliases=['unsubscribe', 'remove', 'delete'], pass_context=True)
-    async def _del(self, ctx: commands.context.Context, service: str, username: str = None):
+    @commands.command(name='del', aliases=['unsubscribe', 'remove', 'delete'])
+    async def _del(self, ctx, service=None, username=None, notification_channel: discord.TextChannel = None):
         """
         Deletes a streamer from your notification list.
 
@@ -140,36 +127,43 @@ class Notifications:
 
         == How to delete a streamer to your notification list ==
 
-        @StreamNotificationBot del <service> <username>
-        Example: @StreamNotificationBot del picarto mykegreywolf
+        `snb?del <service> <username>`
+        Example: `snb?del picarto mykegreywolf`
+
+        == How to delete a streamer to a channel's notification list ==
+
+        `snb?del <service> <username> <channel>`
+
+        Example: `snb?del picarto mykegreywolf #general`
 
         """
 
-        service = service.lower()
-        if not is_service_valid(service) or username is None:
-            await self.bot.send_message(ctx.message.author,
-                                        f'Command error.\n\nPlease take note of the proper format:\n\n'
-                                        '@StreamNotificationBot del <service> <username>\n'
-                                        'Example: @StreamNotificationBot del picarto mykegreywolf')
+        if not validate_notification_channel(ctx, notification_channel):
+            await ctx.send('This channel doesn\'t belong to this guild.')
             return
 
-        username = username.lower()
+        channel = ctx.author if not notification_channel else notification_channel
+        channel_id = await self._get_notification_channel_id(channel)
 
-        sql = '''
-        DELETE FROM subscriptions
-              WHERE streamer_id IN (
-                    SELECT streamer_id
-                      FROM streamers
-                     WHERE service = ?
-                       AND username = ?
-              )
-        '''
-        self._db_execute(sql, service, username)
+        try:
+            database.del_subscription(subscriber_id=channel_id, service=service, username=username)
+        except database.InvalidServiceError:
+            log.warning(f'Command del: Invalid service {service}.')
+            await ctx.send(f'Invalid service.\n\nPlease take note of the proper format:\n\n'
+                           '`snb?del <service> <username>`\n\n'
+                           'Example: `snb?del picarto mykegreywolf`')
+        except database.InvalidUsernameError:
+            log.warning(f'Command del: Invalid username {username}.')
+            await ctx.send(f'Invalid username {username}.')
+        except Exception as e:
+            log.exception(f'Command del: {e}')
+            await ctx.send(f'Something bad happened. 😐')
+        else:
+            log.info(f'{ctx.message.author} unsubscribed from {username}({service})')
+            await ctx.send(f'Unsubscribed from `{username}` on {service.capitalize()}!')
 
-        await self.bot.send_message(ctx.message.author, 'Streamer deleted.')
-
-    @commands.command(pass_context=True)
-    async def list(self, ctx: commands.context.Context):
+    @commands.command()
+    async def list(self, ctx, notification_channel: discord.TextChannel = None):
         """
         Lists all the streams in your notification list.
 
@@ -177,235 +171,111 @@ class Notifications:
 
         """
 
-        sql = '''
-        SELECT username,
-               service
-          FROM subscriptions
-               INNER JOIN users
-               USING (user_id)
-               INNER JOIN streamers
-               USING (streamer_id)
-         WHERE user_id = ?
-        ORDER BY username
-        '''
-        subs = self.db.execute(sql, [ctx.message.author.id]).fetchall()
-
-        embed = discord.Embed()
-        embed.colour = Colour.blue()
-        embed.set_author(name='Streamers you\'re subscribed to')
-
-        picarto_streams = '\n'.join(
-            ['[{0}](https://picarto.tv/{0})'.format(username) for username, service in subs if service == 'picarto'])
-
-        twitch_streams = '\n'.join(
-            ['[{0}](https://twitch.tv/{0})'.format(username) for username, service in subs if service == 'twitch'])
-
-        youtube_streams = '\n'.join(
-            ['[{0}](https://gaming.youtube.com/user/{0}/live)'.format(username) for username, service in subs if
-             service == 'youtube'])
-
-        if len(picarto_streams) > 1024 or len(twitch_streams) > 1024 or len(youtube_streams) > 1024:
-            await self.bot.send_message(ctx.message.author,
-                                        'Go tell MelodicStream#1336 to stop being lazy and implement proper pagination')
-            log.warning('Embed value length is over 1024!')
+        if not validate_notification_channel(ctx, notification_channel):
+            await ctx.send('This channel doesn\'t belong to this guild.')
             return
 
-        if picarto_streams:
-            embed.add_field(name='Picarto', value=picarto_streams)
+        channel = ctx.author if not notification_channel else notification_channel
 
-        if twitch_streams:
-            embed.add_field(name='Twitch', value=twitch_streams)
+        subscriber_id = str(channel.id)
 
-        if youtube_streams:
-            embed.add_field(name='Youtube', value=youtube_streams)
+        subscriptions = database.get_subscriptions_from_subscriber(subscriber_id).fetchall()
 
-        await self.bot.send_message(ctx.message.author, embed=embed)
+        service_list = {k: '\n'.join(username for username, service in subscriptions if service == k) for k in
+                        self.services.keys()}
 
-    def _db_add_user(self, user_id: str, channel_id: str):
-        """
-        Adds a new user to the users table
-        :param user_id: User id
-        :param channel_id: User's private channel's ID
-        :return: inserted streamer's ID
-        """
+        embed = discord.Embed(color=Color.blue())
+        embed.set_author(name='Subscriptions')
 
-        sql = '''
-        INSERT OR IGNORE INTO users (user_id, channel_id)
-        VALUES (?, ?)
-        '''
-        self._db_execute(sql, user_id, channel_id)
-        return user_id
+        for service, streamer_list in service_list.items():
+            if len(streamer_list) > 1024:
+                await ctx.send('Go tell <@272829831304183808> to stop being lazy and implement proper pagination')
+                log.warning('Embed value length is over 1024!')
+                return
+            if streamer_list:
+                embed.add_field(name=service.capitalize(), value=streamer_list)
 
-    def _db_add_streamer(self, service: str, username: str):
-        """
-        Adds a new streamer to the streamers table
-        :param service: Streaming service of the user
-        :param username: Username of the user
-        :return: inserted streamer's ID
-        """
+        if not embed.fields:
+            embed.description = 'You\'re not subscribed to anyone yet!'
 
-        sql = '''
-        INSERT OR IGNORE INTO streamers (username, service)
-        VALUES (?, ?)
-        '''
-        self._db_execute(sql, username, service)
+        await ctx.send(embed=embed)
 
-        sql = '''
-        SELECT streamer_id
-          FROM streamers
-         WHERE username = ?
-           AND service = ?
-        '''
-        streamer_id = self.db.execute(sql, [username, service])
+    async def _get_notification_channel_id(self, channel) -> str:
+        """Retrieves the ID of the channel where the notifications will be sent to
 
-        return streamer_id.fetchone()[0]
+        If the channel is a User or Member, it will return the DMChannel related to that user.
 
-    def _db_add_subscription(self, user_id, streamer_id):
-        """
-        Adds a new subscription to the subscriptions table
-        :param user_id: Discord ID of the user
-        :param streamer_id: ID of the streamer
+        :param channel: The channel where the notifications will be sent to
+        :return: The channel's ID
         """
 
-        sql = '''
-        INSERT OR IGNORE INTO subscriptions (user_id, streamer_id)
-        VALUES (?, ?)
-        '''
-        self._db_execute(sql, user_id, streamer_id)
+        # `channel` might be an actual channel or an user
+        if isinstance(channel, discord.abc.PrivateChannel):
+            # `channel` was an user
+
+            if channel.dm_channel:
+                return str(channel.dm_channel.id)
+
+            dm_channel = await self.bot.create_dm(channel)
+            return str(dm_channel.id)
+
+        # `channel` was really a channel, so just return the ID
+        return str(channel.id)
+
+    async def _get_channel(self, channel_id: int):
+        """Retrieves the channel via its ID
+
+        It works for both TextChannels and DMChannels
+
+        :param channel_id: ID of channel to be retrieved
+        :return: Desired channel
+        """
+
+        channel = self.bot.get_channel(channel_id)
+        if channel:
+            return channel
+
+        # No channel found, then we need to get the user, since channel_id is the ID of a user
+        user = await self.bot.get_user_info(channel_id)
+
+        # If the bot already has a dm_channel open with the user, then there's no need to create a new one
+        if user.dm_channel:
+            return user
+
+        # Creating a new DM channel
+        return await self.bot.create_dm(user)
 
     async def _check_streamers(self):
+        """Background task that checks streamers for online status and notifies the channels subscribed to them"""
+
+        log.info('Waiting for the bot to login...')
+        await asyncio.sleep(5)
         await self.bot.wait_until_ready()
 
         while not self.bot.is_closed:
+            log.info('Checking online streamers...')
             try:
-                await self._check_and_notify()
+                for service_name, service in self.services.items():
+                    for notif in await service.check_and_notify():
+                        channel = await self._get_channel(int(notif.channel_id))
+                        try:
+                            await channel.send(embed=notif.get_embed())
+                        except discord.Forbidden as e:
+                            log.exception(f'Cannot send messages to {channel}')
+                            log.exception(f'_check_and_notify: {e}')
+                        except discord.HTTPException as e:
+                            log.exception(f'Sending the message failed!')
+                            log.exception(f'_check_and_notify: {e}')
+                        except Exception as e:
+                            log.exception('No idea what happened!')
+                            log.exception(f'_check_and_notify: {e}')
+                        else:
+                            log.info(f'Notified {channel} that {notif.username}({service_name}) is online')
             except Exception as e:
                 # Probably a connection error
-                log.error(f'_check_streamers: {e}')
+                log.exception(f'_check_streamers: {e}')
 
             await asyncio.sleep(45)
-
-    async def _check_and_notify(self):
-
-        # Get all online streamers from picarto
-        try:
-            params = {'key': self.key_picarto}
-            async with self.client.get('https://api.picarto.tv/online/all', params=params) as r:
-                pstreams = await r.json() if r.status == 200 else None
-        except Exception as e:
-            # Probably reached the 3000 checks/day limit
-            log.exception(f'_check_and_notify: {type(e).__name__}: {e}')
-            pstreams = None
-
-        # Get all subscriptions
-        streamers = self.db.execute('SELECT * FROM streamers')
-
-        for streamer_id, username, service, online in streamers:
-
-            streamer_is_online = await self._is_streamer_online(service, username, pstreams)
-
-            if streamer_is_online and online == 0:
-
-                stream_url = _get_stream_url(service, username)
-
-                emb = discord.Embed()
-                emb.set_author(name=f'{username} is online on {service.capitalize()}!',
-                               url=stream_url,
-                               icon_url=_get_icon_url(service))
-                emb.description = stream_url
-                emb.colour = Colour.orange()
-
-                sql = '''
-                SELECT user_id,
-                       channel_id
-                  FROM users
-                       INNER JOIN subscriptions
-                       USING (user_id)
-                       INNER JOIN streamers
-                       USING (streamer_id)
-                 WHERE streamer_id = ?
-                '''
-                subs = self.db.execute(sql, [streamer_id])
-
-                for user_id, channel_id in subs:
-                    try:
-                        msg = await self.bot.send_message(discord.Object(id=channel_id), embed=emb)
-                        log.info(f'Notified {msg.channel.recipients[0].name} that {username} is online')
-                    except Forbidden as e:
-                        log.exception(f'User {user_id} cannot accept DMs!')
-                        log.exception(f'_check_and_notify: {e}')
-                    except NotFound as e:
-                        log.exception(f'User {user_id} was not found!')
-                        log.exception(f'_check_and_notify: {e}')
-                    except InvalidArgument as e:
-                        log.exception(f'User {user_id} was an invalid destination!')
-                        log.exception(f'_check_and_notify: {e}')
-
-                self._set_online(streamer_id, 1)
-            elif not streamer_is_online and online == 1:
-                self._set_online(streamer_id, 0)
-
-    async def _is_streamer_online(self, service: str, username: str, pstreams: list) -> bool:
-
-        if service == 'picarto' and pstreams is not None:
-            return find(lambda o: o['channel_name'].lower() == username, pstreams) is not None
-
-        if service == 'twitch':
-            params = {'client_id': self.key_twitch}
-            async with self.client.get(f'https://api.twitch.tv/kraken/streams/{username}', params=params) as r:
-                if r.status != 200:
-                    return False
-
-                stream = await r.json()
-                return stream['stream'] is not None if 'stream' in stream else False
-
-        if service == 'youtube':
-            # Get streamer ID
-            params = {
-                'key': self.key_youtube,
-                'forUsername': username,
-                'part': 'id',
-            }
-            async with self.client.get('https://www.googleapis.com/youtube/v3/channels', params=params) as r:
-                if r.status != 200:
-                    return False
-
-                response = await r.json()
-                if response['pageInfo']['totalResults'] <= 0:
-                    return False
-
-                # We can access the streamer ID
-                streamer_id = response['items'][0]['id']
-
-
-            # Get stream info
-            params = {
-                'key': self.key_youtube,
-                'channelId': streamer_id,
-                'eventType': 'live',
-                'type': 'video',
-                'part': 'snippet',
-            }
-            async with self.client.get('https://www.googleapis.com/youtube/v3/search', params=params) as r:
-                if r.status == 200:
-                    response = await r.json()
-                    return response['pageInfo']['totalResults'] > 0
-
-        return False
-
-    def _set_online(self, streamer_id: str, status: int):
-        sql = '''
-        UPDATE streamers
-           SET is_online = ?
-         WHERE streamer_id = ?
-        '''
-        self._db_execute(sql, status, streamer_id)
-
-    def _db_execute(self, sql: str, *args):
-        cur = self.db.cursor()
-        cur.execute(sql, args)
-        self.db.commit()
-        return cur
 
 
 def setup(bot):

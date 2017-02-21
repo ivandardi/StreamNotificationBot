@@ -4,67 +4,52 @@ import discord
 from discord import utils
 from discord.ext import commands
 
-import util
-from util import initial_extensions
+from notification import database
+from utils import checks
+from utils.misc import initial_extensions
 
 
 class Admin:
-    def __init__(self, bot: commands.Bot):
+    """Bot owner commands."""
+
+    def __init__(self, bot):
         self.bot = bot
 
     @commands.command(hidden=True)
-    @util.is_owner()
-    async def close(self):
+    @checks.is_owner()
+    async def close(self, ctx):
+        """Closes the bot safely."""
         await self.bot.logout()
 
     @commands.command(hidden=True)
-    @util.is_owner()
-    async def say(self, channel_id: str, *, message: str):
-        await self.bot.send_message(discord.Object(id=channel_id), message)
-
-    @commands.command(hidden=True)
-    @util.is_owner()
-    async def status(self, *, status: str):
+    @checks.is_owner()
+    async def status(self, ctx, *, status: str):
         """Changes the bot's status."""
         await self.bot.change_presence(game=discord.Game(name=status))
 
-    # TODO this. use PonyORM
-    async def change_prefix(self):
-        pass
-
     @commands.command(hidden=True)
-    @util.is_owner()
-    async def info(self):
+    @checks.is_owner()
+    async def broadcast(self, ctx, *, message: str):
+        """Broadcasts a message to all subscribers."""
+        for channel_id in database.get_all_subscribers():
+            channel = self.bot.get_channel(channel_id)
+            await channel.send(message)
+
+    @commands.command()
+    @checks.is_owner()
+    async def info(self, ctx):
         """Provides some info about the bot.
 
-        Currently only provides the servers that the bot is in.
-
+        Currently only provides the guilds that the bot is in.
         """
 
-        embed = discord.Embed()
-        embed.add_field(name='Servers',
-                        value='\n'.join([server.name for server in self.bot.servers]),
-                        inline=False)
+        await ctx.send('\n'.join([guild.name for guild in ctx.bot.guilds]))
 
-        await self.bot.say(embed=embed)
-
-    @commands.command(pass_context=True, hidden=True)
-    @util.is_owner()
-    async def clean(self, ctx: commands.context.Context, limit: int = 100):
-        """Removes a specified amount of messages from the chat."""
-
-        deleted = 0
-        async for m in self.bot.logs_from(ctx.message.channel, limit=limit, before=ctx.message):
-            if m.author == self.bot.user:
-                await self.bot.delete_message(m)
-                deleted += 1
-
-        await self.bot.say(f'Deleted {deleted} message(s)', delete_after=5)
-
-    @commands.command(name='reload', hidden=True)
-    @util.is_owner()
-    async def _reload(self, *, module: str = None):
+    @commands.command(name='reload')
+    @checks.is_owner()
+    async def _reload(self, ctx, *, module: str = None):
         """Reloads a module."""
+
         try:
             if module:
                 self.bot.unload_extension(module)
@@ -74,25 +59,26 @@ class Admin:
                     self.bot.unload_extension(m)
                     self.bot.load_extension(m)
         except Exception as e:
-            await self.bot.say('Failed to reload extensions!\n{}: {}'.format(type(e).__name__, e))
+            await ctx.send('Failed to reload extensions!\n{}: {}'.format(type(e).__name__, e))
         else:
-            await self.bot.say('\N{OK HAND SIGN}')
+            await ctx.send('\N{OK HAND SIGN}')
 
     @commands.command(aliases=['find_member'], hidden=True)
-    @util.is_owner()
-    async def find_user(self, *, user_id: int):
+    @checks.is_owner()
+    async def find_user(self, ctx, *, user_id: int):
         """Finds a member."""
 
         member = utils.find(lambda m: m.id == str(user_id), self.bot.get_all_members())
         if member:
-            await self.bot.say(f'Found user {member.name} in server {member.server.name}.')
+            await ctx.send(f'Found user {member.name} in guild {member.guild.name}.')
         else:
-            await self.bot.say('User not found.')
+            await ctx.send('User not found.')
 
-    @commands.command(pass_context=True, hidden=True)
-    @util.is_owner()
-    async def debug(self, ctx: commands.context.Context, *, code: str):
+    @commands.command(hidden=True)
+    @checks.is_owner()
+    async def debug(self, ctx, *, code: str):
         """Evaluates code."""
+
         code = code.strip('` ')
         python = '```py\n{}\n```'
 
@@ -100,9 +86,9 @@ class Admin:
             'bot': self.bot,
             'ctx': ctx,
             'msg': ctx.message,
-            'srv': ctx.message.server,
-            'cnl': ctx.message.channel,
-            'ath': ctx.message.author
+            'gld': ctx.guild,
+            'cnl': ctx.channel,
+            'ath': ctx.author,
         }
 
         env.update(globals())
@@ -112,10 +98,10 @@ class Admin:
             if inspect.isawaitable(result):
                 result = await result
         except Exception as e:
-            await self.bot.say(python.format(type(e).__name__ + ': ' + str(e)))
+            await ctx.send(python.format(type(e).__name__ + ': ' + str(e)))
             return
 
-        await self.bot.say(python.format(result))
+        await ctx.send(python.format(result))
 
 
 def setup(bot):
