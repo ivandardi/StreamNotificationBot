@@ -115,8 +115,8 @@ class Notifications:
         except database.InvalidServiceError:
             log.warning(f'Command add: Invalid service {service}.')
             await ctx.send(f'Invalid service.\n\nPlease take note of the proper format:\n\n'
-                           'snb?add <service> <username>\n\n'
-                           'Example: snb?add picarto mykegreywolf')
+                           '`snb?add <service> <username>`\n\n'
+                           'Example: `snb?add picarto mykegreywolf`')
         except database.InvalidUsernameError:
             log.warning(f'Command add: Invalid username {username}.')
             await ctx.send(f'Invalid username {username}.')
@@ -169,8 +169,8 @@ class Notifications:
         except database.InvalidServiceError:
             log.warning(f'Command del: Invalid service {service}.')
             await ctx.send(f'Invalid service.\n\nPlease take note of the proper format:\n\n'
-                           'snb?del <service> <username>\n\n'
-                           'Example: snb?del picarto mykegreywolf')
+                           '`snb?del <service> <username>`\n\n'
+                           'Example: `snb?del picarto mykegreywolf`')
         except database.InvalidUsernameError:
             log.warning(f'Command del: Invalid username {username}.')
             await ctx.send(f'Invalid username {username}.')
