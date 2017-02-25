@@ -42,18 +42,19 @@ class Meta:
         else:
             ctx.send(f'Prefix successfully changed to {prefix}')
 
-    @commands.command(aliases=['purge, prune'])
+    @commands.command()
     @checks.is_owner()
     @commands.has_permissions(manage_messages=True)
     async def clean(self, ctx, limit: int = 100):
         """Removes a specified amount of messages from the chat."""
 
-        try:
-            deleted = await ctx.channel.purge(limit=limit, check=lambda m: m.author == self.bot)
-        except:
-            await ctx.send('Failed to delete messages.', delete_after=5)
-        else:
-            await ctx.send(f'Deleted {len(deleted)} message(s)', delete_after=5)
+        deleted = 0
+        async for m in self.bot.logs_from(ctx.message.channel, limit=limit, before=ctx.message):
+            if m.author == self.bot.user:
+                await self.bot.delete_message(m)
+                deleted += 1
+
+        await self.bot.say(f'Deleted {deleted} message(s)', delete_after=5)
 
     @commands.command()
     async def uptime(self, ctx):

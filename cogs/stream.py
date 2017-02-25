@@ -251,15 +251,9 @@ class Notifications:
         """
 
         # `channel` might be an actual channel or an user
+        if isinstance(channel, discord.abc.User):
+            channel = await channel.create_dm()
 
-        if isinstance(channel, discord.User):
-            if channel.dm_channel:
-                return str(channel.dm_channel.id)
-
-            dm_channel = await self.bot.create_dm(channel)
-            return str(dm_channel.id)
-
-        # `channel` was really a channel, so just return the ID
         return str(channel.id)
 
     async def _check_streamers(self):

@@ -1,8 +1,7 @@
 import inspect
+import logging
 
 import discord
-import logging
-from discord import utils
 from discord.ext import commands
 
 from notification import database
@@ -10,6 +9,7 @@ from utils import checks
 from utils.misc import initial_extensions
 
 log = logging.getLogger('stream_notif_bot')
+
 
 class Admin:
     """Bot owner commands."""
@@ -68,17 +68,6 @@ class Admin:
             await ctx.send('Failed to reload extensions!\n{}: {}'.format(type(e).__name__, e))
         else:
             await ctx.send('\N{OK HAND SIGN}')
-
-    @commands.command(aliases=['find_member'], hidden=True)
-    @checks.is_owner()
-    async def find_user(self, ctx, *, user_id: int):
-        """Finds a member."""
-
-        member = utils.find(lambda m: m.id == str(user_id), self.bot.get_all_members())
-        if member:
-            await ctx.send(f'Found user {member.name} in guild {member.guild.name}.')
-        else:
-            await ctx.send('User not found.')
 
     @commands.command(hidden=True)
     @checks.is_owner()
