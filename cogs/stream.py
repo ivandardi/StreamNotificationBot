@@ -251,9 +251,8 @@ class Notifications:
         """
 
         # `channel` might be an actual channel or an user
-        if isinstance(channel, discord.abc.PrivateChannel):
-            # `channel` was an user
 
+        if isinstance(channel, discord.User):
             if channel.dm_channel:
                 return str(channel.dm_channel.id)
 
@@ -262,29 +261,6 @@ class Notifications:
 
         # `channel` was really a channel, so just return the ID
         return str(channel.id)
-
-    async def _get_channel(self, channel_id: int):
-        """Retrieves the channel via its ID
-
-        It works for both TextChannels and DMChannels
-
-        :param channel_id: ID of channel to be retrieved
-        :return: Desired channel
-        """
-
-        channel = self.bot.get_channel(channel_id)
-        if channel:
-            return channel
-
-        # No channel found, then we need to get the user, since channel_id is the ID of a user
-        user = await self.bot.get_user_info(channel_id)
-
-        # If the bot already has a dm_channel open with the user, then there's no need to create a new one
-        if user.dm_channel:
-            return user
-
-        # Creating a new DM channel
-        return await self.bot.create_dm(user)
 
     async def _check_streamers(self):
         """Background task that checks streamers for online status and notifies the channels subscribed to them"""
@@ -298,7 +274,7 @@ class Notifications:
             try:
                 for service_name, service in self.services.items():
                     for notif in await service.check_and_notify():
-                        channel = await self._get_channel(int(notif.channel_id))
+                        channel = self.bot.get_channel(int(notif.channel_id))
                         try:
                             await channel.send(embed=notif.get_embed())
                         except discord.Forbidden as e:
