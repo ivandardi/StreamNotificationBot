@@ -16,11 +16,11 @@ class Twitch(Service):
 
     async def check_and_notify(self) -> Iterable[Notification]:
 
-        streamers = await self._get_online_streamers()
+        streamers, all_streamers = await self._get_online_streamers()
 
         notifications = []
 
-        for streamer in database.get_all_streamers_from_service(service=self.service):
+        for streamer in all_streamers:
 
             streamer_is_online = find(lambda o: o['channel']['name'] == streamer['username'], streamers) is not None
 
@@ -49,12 +49,18 @@ class Twitch(Service):
                                   service=self.service, username=username, service_id='TWITCH')
 
     async def _get_online_streamers(self):
-        """Get all online streamers"""
+        """Get all online streamers
+
+        :return: (online_streamers, all_streamers)
+        """
 
         # NOTE: I don't know if the twitch API lib is currently using pagination
 
         streamers = database.get_all_streamers_from_service(service=self.service)
-        return streams.all(client_id=self.api_key, channel=','.join(s['username'] for s in streamers))['streams']
+
+        channels = ','.join(s['username'] for s in streamers)
+
+        return streams.all(client_id=self.api_key, channel=channels)['streams'], streamers
 
     @property
     def icon_url(self):

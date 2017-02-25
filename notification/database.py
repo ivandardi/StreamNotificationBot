@@ -55,32 +55,6 @@ class InvalidUsernameError(Exception):
 # Database access functions
 ################################################################################
 
-def validate_service(service: str):
-    """ Validates the service passed
-
-    Currently only the following services are supported:
-
-    * picarto
-    * twitch
-    * youtube
-
-    If the service is invalid, it raises a `InvalidServiceError`.
-    Otherwise, it returns the validated service.
-
-    :param service: the service to be validated
-    :return: the validated service
-    """
-
-    if not service:
-        raise InvalidServiceError
-
-    service = service.lower()
-
-    if service != 'picarto' and service != 'twitch' and service != 'youtube':
-        raise InvalidServiceError
-
-    return service
-
 
 def validate_username(username: str):
     """ Validates the username passed
@@ -127,7 +101,6 @@ def add_streamer(*, service: str, username: str, service_id: str):
     :return: inserted streamer's ID
     """
 
-    service = validate_service(service)
     username = validate_username(username)
 
     sql = '''
@@ -156,7 +129,6 @@ def add_subscription(*, subscriber_id: str, channel_id: str, service: str, usern
     :param username: Username of the user
     """
 
-    service = validate_service(service)
     username = validate_username(username)
 
     add_subscriber(subscriber_id=subscriber_id, channel_id=channel_id)
@@ -180,7 +152,6 @@ def del_subscription(*, subscriber_id: str, service: str, username: str):
     :param username: Username of the user
     """
 
-    service = validate_service(service)
     username = validate_username(username)
 
     sql = '''
@@ -219,7 +190,6 @@ def get_all_streamers_from_service(*, service: str):
     :param service: The service to get the streamers from
     :return: The streamers related to the service
     """
-    service = validate_service(service)
 
     sql = '''
     SELECT *

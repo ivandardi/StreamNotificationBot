@@ -42,7 +42,7 @@ class Notifications:
     """
     Notification related commands.
 
-    Supported services: Twitch, Youtube and Picarto.
+    Supported services: Twitch and Picarto.
 
     == How to add a streamer to your notification list ==
 
@@ -77,7 +77,7 @@ class Notifications:
     async def add(self, ctx, service=None, username=None, notification_channel: discord.TextChannel = None):
         """Adds a streamer to your notification list.
 
-        Supported services: Twitch, Youtube and Picarto.
+        Supported services: Twitch and Picarto.
 
         It's case insensitive, meaning upper and lower case letters don't matter. MYKEgreyWOLF is the same as mykegreywolf.
 
@@ -107,7 +107,7 @@ class Notifications:
 
         try:
             channel_id = await self._get_notification_channel_id(subscriber)
-            service = database.validate_service(service)
+            service = self._validate_service(service)
 
             await self.services[service].add_subscription(subscriber_id=subscriber_id, channel_id=channel_id,
                                                           username=username)
@@ -136,7 +136,7 @@ class Notifications:
         """
         Deletes a streamer from your notification list.
 
-        Supported services: Twitch, Youtube and Picarto.
+        Supported services: Twitch and Picarto.
 
         It's case insensitive, meaning upper and lower case letters don't matter. MYKEgreyWOLF is the same as mykegreywolf.
 
@@ -164,6 +164,7 @@ class Notifications:
         channel_id = await self._get_notification_channel_id(channel)
 
         try:
+            service = self._validate_service(service)
             database.del_subscription(subscriber_id=channel_id, service=service, username=username)
         except database.InvalidServiceError:
             log.warning(f'Command del: Invalid service {service}.')
@@ -202,7 +203,7 @@ class Notifications:
             k: '\n'.join(f'[{username}]({self.services[service].stream_url.format(username)})'
                          for username, service in subscriptions if service == k)
             for k in self.services.keys()
-        }
+            }
 
         embed = discord.Embed(color=Color.blue())
         embed.set_author(name='Subscriptions')
@@ -219,6 +220,26 @@ class Notifications:
             embed.description = 'You\'re not subscribed to anyone yet!'
 
         await ctx.send(embed=embed)
+
+    def _validate_service(self, service: str):
+        """ Validates the service passed
+
+        If the service is invalid, it raises a `InvalidServiceError`.
+        Otherwise, it returns the validated service.
+
+        :param service: the service to be validated
+        :return: the validated service
+        """
+
+        if not service:
+            raise database.InvalidServiceError
+
+        service = service.lower()
+
+        if service not in self.services:
+            raise database.InvalidServiceError
+
+        return service
 
     async def _get_notification_channel_id(self, channel) -> str:
         """Retrieves the ID of the channel where the notifications will be sent to
@@ -272,7 +293,7 @@ class Notifications:
         await asyncio.sleep(5)
         await self.bot.wait_until_ready()
 
-        while not self.bot.is_closed:
+        while not self.bot.is_closed():
             log.info('Checking online streamers...')
             try:
                 for service_name, service in self.services.items():

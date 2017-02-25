@@ -15,7 +15,7 @@ Author: MelodicStream#1336
 
 ==== HOW TO USE THE BOT ====
 
-Currently supported services: Twitch, Youtube and Picarto.
+Currently supported services: Twitch and Picarto.
 
 To add a streamer to your subscription list, use the following command:
 
