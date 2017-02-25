@@ -85,7 +85,7 @@ def add_subscriber(*, subscriber_id: str, channel_id: str):
     """
 
     sql = '''
-    INSERT OR IGNORE INTO subscribers (subscriber_id, channel_id)
+    INSERT OR REPLACE INTO subscribers (subscriber_id, channel_id)
     VALUES (?, ?)
     '''
     with _db:
@@ -104,7 +104,7 @@ def add_streamer(*, service: str, username: str, service_id: str):
     username = validate_username(username)
 
     sql = '''
-    INSERT OR IGNORE INTO streamers (username, service, service_id)
+    INSERT OR REPLACE INTO streamers (username, service, service_id)
     VALUES (?, ?, ?)
     '''
     with _db:
@@ -135,7 +135,7 @@ def add_subscription(*, subscriber_id: str, channel_id: str, service: str, usern
     streamer_id = add_streamer(service=service, username=username, service_id=service_id)
 
     sql = '''
-    INSERT OR IGNORE INTO subscriptions (subscriber_id, streamer_id)
+    INSERT OR REPLACE INTO subscriptions (subscriber_id, streamer_id)
     VALUES (?, ?)
     '''
     with _db:

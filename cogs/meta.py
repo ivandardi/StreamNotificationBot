@@ -78,6 +78,12 @@ class Meta:
 
         await ctx.send(f'Invite link: {discord.utils.oauth_url(self.bot.user.id, permissions=Permissions.text())}')
 
+    @commands.command()
+    async def source(self, ctx):
+        """Gives the Github link to the bot's source code."""
+
+        await ctx.send('https://github.com/ivandardi/StreamNotificationBot')
+
 
 def setup(bot):
     bot.add_cog(Meta(bot))

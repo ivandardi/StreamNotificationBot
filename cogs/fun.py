@@ -21,8 +21,9 @@ class Fun:
 
         if not self.why_list:
             async with httpclient.client.get('https://xkcd.com/why.txt') as r:
-                self.why_list = await r.text()
-                self.why_list = self.why_list.split('\n')
+                with ctx.typing():
+                    self.why_list = await r.text()
+                    self.why_list = self.why_list.split('\n')
 
         await ctx.send(random.choice(self.why_list))
 

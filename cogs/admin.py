@@ -1,4 +1,3 @@
-import inspect
 import logging
 
 import discord
@@ -68,35 +67,6 @@ class Admin:
             await ctx.send('Failed to reload extensions!\n{}: {}'.format(type(e).__name__, e))
         else:
             await ctx.send('\N{OK HAND SIGN}')
-
-    @commands.command(hidden=True)
-    @checks.is_owner()
-    async def debug(self, ctx, *, code: str):
-        """Evaluates code."""
-
-        code = code.strip('` ')
-        python = '```py\n{}\n```'
-
-        env = {
-            'bot': self.bot,
-            'ctx': ctx,
-            'msg': ctx.message,
-            'gld': ctx.guild,
-            'cnl': ctx.channel,
-            'ath': ctx.author,
-        }
-
-        env.update(globals())
-
-        try:
-            result = eval(code, env)
-            if inspect.isawaitable(result):
-                result = await result
-        except Exception as e:
-            await ctx.send(python.format(type(e).__name__ + ': ' + str(e)))
-            return
-
-        await ctx.send(python.format(result))
 
 
 def setup(bot):
