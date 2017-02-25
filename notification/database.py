@@ -205,7 +205,7 @@ def get_all_subscribers():
     :return: Iterable of IDs of the subscribers
     """
     sql = '''
-    SELECT channel_id
+    SELECT *
       FROM subscribers
     '''
     return _db.execute(sql)

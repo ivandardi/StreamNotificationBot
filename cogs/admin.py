@@ -32,7 +32,7 @@ class Admin:
     @checks.is_owner()
     async def broadcast(self, ctx, *, message: str):
         """Broadcasts a message to all subscribers."""
-        for (channel_id,) in database.get_all_subscribers():
+        for subscriber_id, channel_id in database.get_all_subscribers():
             channel = self.bot.get_channel(int(channel_id))
             try:
                 await channel.send(message)

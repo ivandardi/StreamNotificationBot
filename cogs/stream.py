@@ -73,6 +73,26 @@ class Notifications:
         self.task.cancel()
         database.close_database()
 
+    @commands.command()
+    async def fix(self, ctx):
+        for subscriber_id, channel_id in database.get_all_subscribers().fetchall():
+            try:
+                log.debug(f'subscriber_id: {subscriber_id}')
+                log.debug(f'channel_id: {channel_id}')
+
+                user = self.bot.get_user(int(subscriber_id))
+                log.debug(f'user: {user}')
+
+                dmc = await user.create_dm()
+                log.debug(f'dmc: {dmc}')
+
+                dmc_id = str(dmc.id)
+                log.debug(f'dmc_id: {dmc_id}')
+
+                database.add_subscriber(subscriber_id=subscriber_id, channel_id=dmc_id)
+            except Exception as e:
+                log.exception(f'ERROR WITH {subscriber_id}, {channel_id}\n{e}')
+
     @commands.command(aliases=['subscribe'])
     async def add(self, ctx, service=None, username=None, notification_channel: discord.TextChannel = None):
         """Adds a streamer to your notification list.
