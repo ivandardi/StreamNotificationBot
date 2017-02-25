@@ -1,6 +1,7 @@
 import inspect
 
 import discord
+import logging
 from discord import utils
 from discord.ext import commands
 
@@ -8,6 +9,7 @@ from notification import database
 from utils import checks
 from utils.misc import initial_extensions
 
+log = logging.getLogger('stream_notif_bot')
 
 class Admin:
     """Bot owner commands."""
@@ -31,9 +33,13 @@ class Admin:
     @checks.is_owner()
     async def broadcast(self, ctx, *, message: str):
         """Broadcasts a message to all subscribers."""
-        for channel_id in database.get_all_subscribers():
-            channel = self.bot.get_channel(channel_id)
-            await channel.send(message)
+        for (channel_id,) in database.get_all_subscribers():
+            channel = self.bot.get_channel(int(channel_id))
+            try:
+                await channel.send(message)
+            except Exception as e:
+                log.exception(f'Error happened when trying to broadcast to channel {channel_id}!')
+                log.exception(f'broadcast: {e}')
 
     @commands.command(hidden=True)
     @checks.is_owner()
