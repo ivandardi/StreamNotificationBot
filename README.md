@@ -5,7 +5,6 @@ A bot that notifies you when your favorite streamers go online!
 ## Currently supported services
 
 * Twitch
-* Youtube
 * Picarto
 
 ## Usage and examples
