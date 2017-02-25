@@ -284,7 +284,7 @@ class Notifications:
                             log.exception(f'Sending the message failed!')
                             log.exception(f'_check_and_notify: {e}')
                         except Exception as e:
-                            log.exception('No idea what happened!')
+                            log.exception(f'No idea what happened when trying to notify channel {notif.channel_id}!')
                             log.exception(f'_check_and_notify: {e}')
                         else:
                             log.info(f'Notified {channel} that {notif.username}({service_name}) is online')
