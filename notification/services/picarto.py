@@ -1,8 +1,6 @@
 import logging
 from typing import Iterable
 
-from discord.utils import find
-
 from notification import database
 from notification import httpclient
 from .service import Service, Notification, StreamerNotFoundError
@@ -22,27 +20,28 @@ class Picarto(Service):
 
         notifications = []
 
-        for streamer in database.get_all_streamers_from_service(service=self.service):
+        all_streamers = database.get_all_streamers_from_service(service=self.service)
+        for streamer_id, service_id, service, username, is_online in all_streamers:
 
-            streamer_is_online = find(lambda o: o['channel_name'].lower() == streamer['username'], pstreams) is not None
+            streamer_is_online = username in pstreams
 
-            if streamer_is_online and not streamer['is_online']:
+            if streamer_is_online and not is_online:
 
-                for (channel_id,) in database.get_subscribers_from_streamer(streamer['streamer_id']):
+                for (channel_id,) in database.get_subscribers_from_streamer(streamer_id):
                     notif = Notification(
                         channel_id=channel_id,
-                        username=streamer['username'],
+                        username=username,
                         service=self.service,
                         icon_url=self.icon_url,
-                        stream_url=self.stream_url.format(streamer['username']),
+                        stream_url=self.stream_url.format(username),
                     )
                     notifications.append(notif)
 
-                database.set_online(streamer['streamer_id'], 1)
+                database.set_online(streamer_id, 1)
 
-            elif not streamer_is_online and streamer['is_online']:
+            elif not streamer_is_online and is_online:
 
-                database.set_online(streamer['streamer_id'], 0)
+                database.set_online(streamer_id, 0)
 
         return notifications
 
@@ -65,7 +64,9 @@ class Picarto(Service):
         try:
             params = {'key': self.api_key}
             async with httpclient.client.get('https://api.picarto.tv/online/all', params=params) as r:
-                pstreams = await r.json() if r.status == 200 else None
+                streams = await r.json()
+
+            pstreams = list(map(lambda elem: elem['channel_name'].lower(), streams))
         except Exception as e:
             # Probably reached the 3000 checks/day limit
             log.exception(f'check_and_notify: {type(e).__name__}: {e}')

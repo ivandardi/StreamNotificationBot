@@ -74,7 +74,7 @@ def validate_username(username: str):
     if username is None or not re.fullmatch(r'^\w{3,24}$', username, re.IGNORECASE):
         raise InvalidUsernameError
 
-    return username
+    return username.lower()
 
 
 def add_subscriber(*, subscriber_id: str, channel_id: str):

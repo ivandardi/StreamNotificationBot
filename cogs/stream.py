@@ -264,27 +264,23 @@ class Notifications:
         await self.bot.wait_until_ready()
 
         while not self.bot.is_closed():
-            log.info('Checking online streamers...')
             try:
                 for service_name, service in self.services.items():
-                    for notif in await service.check_and_notify():
+                    notifications = await service.check_and_notify()
+                    for notif in notifications:
                         channel = self.bot.get_channel(int(notif.channel_id))
                         try:
                             await channel.send(embed=notif.get_embed())
                         except discord.Forbidden as e:
-                            log.exception(f'Cannot send messages to {channel}')
-                            log.exception(f'_check_and_notify: {e}')
+                            log.exception(f'_check_streamers: Cannot send messages to {channel}\n{e}')
                         except discord.HTTPException as e:
-                            log.exception(f'Sending the message failed!')
-                            log.exception(f'_check_and_notify: {e}')
+                            log.exception(f'_check_streamers: Sending the message failed!\n{e}')
                         except Exception as e:
-                            log.exception(f'No idea what happened when trying to notify channel {notif.channel_id}!')
-                            log.exception(f'_check_and_notify: {e}')
+                            log.exception(f'_check_streamers: Error on channel {notif.channel_id}!\n{e}')
                         else:
                             log.info(f'Notified {channel} that {notif.username}({service_name}) is online')
             except Exception as e:
-                # Probably a connection error
-                log.exception(f'_check_streamers: {e}')
+                log.exception(f'_check_streamers: Probably a connection error\n{e}')
 
             await asyncio.sleep(45)
 
