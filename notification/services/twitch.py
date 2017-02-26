@@ -26,11 +26,11 @@ class Twitch(Service):
 
             if streamer_is_online and not streamer['is_online']:
 
-                for (channel_id,) in database.get_subscribers_from_streamer(streamer['streamer_id']):
+                for row in database.get_subscribers_from_streamer(streamer['streamer_id']):
                     notif = Notification(
-                        channel_id=channel_id,
+                        subscriber_id=int(row['subscriber_id']),
+                        channel_id=int(row['channel_id']),
                         username=streamer['username'],
-                        service=self.service,
                         icon_url=self.icon_url,
                         stream_url=self.stream_url.format(streamer['username']),
                     )

@@ -218,7 +218,7 @@ def get_subscribers_from_streamer(streamer_id: int):
     :return: Iterable of channel IDs of the streamer's subscribers
     """
     sql = '''
-    SELECT channel_id
+    SELECT *
       FROM subscribers
            INNER JOIN subscriptions
            USING (subscriber_id)

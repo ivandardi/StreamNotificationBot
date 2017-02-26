@@ -276,6 +276,16 @@ class Notifications:
 
         return str(channel.id)
 
+    async def _temp_get_channel(self, channel_id: int, subscriber_id: int):
+        """Temporary function to get a channel until the caching issues are fixed."""
+
+        channel = self.bot.get_channel(channel_id)
+        if not channel:
+            user = self.bot.get_user(subscriber_id)
+            channel = await user.create_dm()
+
+        return channel
+
     async def _check_streamers(self):
         """Background task that checks streamers for online status and notifies the channels subscribed to them"""
 
@@ -288,9 +298,9 @@ class Notifications:
                 for service_name, service in self.services.items():
                     notifications = await service.check_and_notify()
                     for notif in notifications:
-                        channel = self.bot.get_channel(int(notif.channel_id))
+                        channel = await self._temp_get_channel(notif.channel_id, notif.subscriber_id)
                         try:
-                            await channel.send(embed=notif.get_embed())
+                            await channel.send(embed=notif.get_embed(service_name))
                         except discord.Forbidden as e:
                             log.exception(f'_check_streamers: Cannot send messages to {channel}\n{e}')
                         except discord.HTTPException as e:
