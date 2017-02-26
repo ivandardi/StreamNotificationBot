@@ -25,7 +25,7 @@ class Fun:
                     self.why_list = await r.text()
                     self.why_list = self.why_list.split('\n')
 
-        await ctx.send(random.choice(self.why_list))
+            await ctx.send(random.choice(self.why_list))
 
 
 def setup(bot):
