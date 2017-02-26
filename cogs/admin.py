@@ -66,7 +66,7 @@ class Admin:
         except Exception as e:
             await ctx.send('Failed to reload extensions!\n{}: {}'.format(type(e).__name__, e))
         else:
-            await ctx.send('\N{OK HAND SIGN}')
+            await ctx.message.add_reaction('👌')
 
 
 def setup(bot):
