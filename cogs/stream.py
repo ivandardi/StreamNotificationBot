@@ -125,31 +125,32 @@ class Notifications:
         subscriber = ctx.author if not notification_channel else notification_channel
         subscriber_id = str(subscriber.id)
 
-        try:
-            channel_id = await self._get_notification_channel_id(subscriber)
-            service = self._validate_service(service)
+        async with ctx.typing():
+            try:
+                channel_id = await self._get_notification_channel_id(subscriber)
+                service = self._validate_service(service)
 
-            await self.services[service].add_subscription(subscriber_id=subscriber_id, channel_id=channel_id,
-                                                          username=username)
+                await self.services[service].add_subscription(subscriber_id=subscriber_id, channel_id=channel_id,
+                                                              username=username)
 
-        except database.InvalidServiceError:
-            log.warning(f'Command add: Invalid service {service}.')
-            await ctx.send(f'Invalid service.\n\nPlease take note of the proper format:\n\n'
-                           '`snb?add <service> <username>`\n\n'
-                           'Example: `snb?add picarto mykegreywolf`')
-        except database.InvalidUsernameError:
-            log.warning(f'Command add: Invalid username {username}.')
-            await ctx.send(f'Invalid username {username}.')
-        except services.StreamerNotFoundError:
-            log.warning(f'Command add: streamer {username} not found.')
-            await ctx.send(f'The streamer {username} doesn\'t exist.')
-        except Exception as e:
-            log.exception(f'add command exception: {e}')
-            await ctx.send(f'Something bad happened. 😐')
-        else:
-            log.info(f'{subscriber} subscribed to {username}({service})')
-            await ctx.send(
-                f'{subscriber.name} will be notified when `{username}` goes online on {service.capitalize()}!')
+            except database.InvalidServiceError:
+                log.warning(f'Command add: Invalid service {service}.')
+                await ctx.send(f'Invalid service.\n\nPlease take note of the proper format:\n\n'
+                               '`snb?add <service> <username>`\n\n'
+                               'Example: `snb?add picarto mykegreywolf`')
+            except database.InvalidUsernameError:
+                log.warning(f'Command add: Invalid username {username}.')
+                await ctx.send(f'Invalid username {username}.')
+            except services.StreamerNotFoundError:
+                log.warning(f'Command add: streamer {username} not found.')
+                await ctx.send(f'The streamer {username} doesn\'t exist.')
+            except Exception as e:
+                log.exception(f'add command exception: {e}')
+                await ctx.send(f'Something bad happened. 😐')
+            else:
+                log.info(f'{subscriber} subscribed to {username}({service})')
+                await ctx.send(
+                    f'{subscriber.name} will be notified when `{username}` goes online on {service.capitalize()}!')
 
     @commands.command(name='del', aliases=['unsubscribe', 'remove', 'delete'])
     async def _del(self, ctx, service=None, username=None, notification_channel: discord.TextChannel = None):

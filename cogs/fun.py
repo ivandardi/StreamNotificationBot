@@ -19,9 +19,9 @@ class Fun:
 
         """
 
-        if not self.why_list:
-            async with httpclient.client.get('https://xkcd.com/why.txt') as r:
-                with ctx.typing():
+        async with ctx.typing():
+            if not self.why_list:
+                async with httpclient.client.get('https://xkcd.com/why.txt') as r:
                     self.why_list = await r.text()
                     self.why_list = self.why_list.split('\n')
 
