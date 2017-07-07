@@ -89,7 +89,7 @@ class Picarto(Service):
     async def get_streamer_from_API(self, username: str) -> PicartoStreamer:
         streamer = await self.get_channel_by_name(username)
         if not streamer:
-            raise errors.StreamerNotFoundError
+            raise errors.StreamerNotFoundError(username)
         return PicartoStreamer.from_api_response(
             api=streamer,
             database=await self.database_cache(),
@@ -118,9 +118,9 @@ class Picarto(Service):
 
     async def validate_username(self, username: str) -> str:
         if not username:
-            raise errors.InvalidUsernameError
+            raise errors.InvalidUsernameError(username)
         if not re.fullmatch(r'^\w{3,24}$', username, re.IGNORECASE):
-            raise errors.InvalidUsernameError
+            raise errors.InvalidUsernameError(username)
 
         return username.lower()
 

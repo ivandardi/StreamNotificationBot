@@ -54,7 +54,8 @@ class Subscriber:
 
     @classmethod
     async def get_subscriber_id_and_notification_channel(cls, subscriber):
-        if isinstance(subscriber, discord.User):
+        log.debug(subscriber.__class__.__name__)
+        if isinstance(subscriber, (discord.User, discord.Member)):
             subscriber_channel = await subscriber.create_dm()
             notification_channel_id = subscriber_channel.id
             return cls(subscriber, notification_channel_id)
@@ -151,9 +152,9 @@ class Service(ABC):
         if isinstance(error, commands.CommandInvokeError):
             original = error.original
             if isinstance(original, errors.InvalidUsernameError):
-                await ctx.send('Invalid username!')
+                await ctx.send(f'Invalid username: {str(original)}')
             if isinstance(original, errors.StreamerNotFoundError):
-                await ctx.send('Streamer not found!')
+                await ctx.send(f'Streamer not found: {str(original)}')
             if isinstance(original, errors.StreamerAlreadyExists):
                 await ctx.send("You're already subscribed to this streamer!")
             if isinstance(original, errors.InvalidChannelError):
@@ -254,11 +255,11 @@ class Service(ABC):
         channel = await validate_notification_channel(ctx, channel)
         async with ctx.typing():
             streamers = await self.bot.database.get_subscriptions_from_subscriber(subscriber.id, self.service_name)
-            embed = self._make_list_embed(streamers)
+            embed = self._make_list_embed(streamers, subscriber.subscriber)
 
         await ctx.send(embed=embed)
 
-    def _make_list_embed(self, streamers):
+    def _make_list_embed(self, streamers, subscriber):
         streams = '\n'.join(f'[{username}]({self.stream_url(username)})' for (username,) in streamers)
         if len(streams) > 1024:
             log.warning('Embed value length is over 1024!')
@@ -268,7 +269,7 @@ class Service(ABC):
             )
 
         embed = discord.Embed(description=streams, color=discord.Color.blue())
-        embed.set_author(name=f"Streamers you're subscribed to on {self.service_name.capitalize()}")
+        embed.set_author(name=f"{self.service_name.capitalize()} subscriptions for {subscriber}")
         return embed
 
     async def on_private_channel_delete(self, channel: discord.abc.PrivateChannel):
@@ -302,7 +303,7 @@ class Service(ABC):
         db = await self.database_cache()
         streamer = discord.utils.find(lambda s: s.channel_name == streamer_username, db.values())
         if not streamer:
-            raise errors.StreamerNotFoundError
+            raise errors.StreamerNotFoundError(streamer_username)
         del db[streamer.service_id]
 
     async def _notify_subscribers(self):

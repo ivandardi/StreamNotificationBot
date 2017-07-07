@@ -33,7 +33,6 @@ class TwitchStreamer(Streamer):
 
     @classmethod
     def from_api_response(cls, api, database):
-        log.debug(api)
         service_id = _get_service_id(api)
         database_streamer = database.get(service_id, None)
         streamer = cls(
@@ -116,7 +115,7 @@ class Twitch(Service):
         }
         response = await self.api_request(endpoint='/users', params=params)
         if response['_total'] != 1:
-            raise errors.StreamerNotFoundError
+            raise errors.StreamerNotFoundError(username)
         streamer = response['users'][0]
         return TwitchStreamer.from_api_response(
             api=streamer,
@@ -134,9 +133,9 @@ class Twitch(Service):
 
     async def validate_username(self, username: str) -> str:
         if not username:
-            raise errors.InvalidUsernameError
+            raise errors.InvalidUsernameError(username)
         if not re.fullmatch(r'^\w{3,24}$', username, re.IGNORECASE):
-            raise errors.InvalidUsernameError
+            raise errors.InvalidUsernameError(username)
 
         return username.lower()
 
