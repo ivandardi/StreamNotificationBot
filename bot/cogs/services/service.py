@@ -1,6 +1,7 @@
 import asyncio
 import itertools
 import logging
+import random
 from abc import ABC, abstractmethod
 from typing import Dict, Type
 
@@ -10,6 +11,11 @@ from discord.ext import commands
 from ...utils import errors, strings
 
 log = logging.getLogger(__name__)
+
+
+def anticache():
+    rand = lambda: random.randint(0, 2 ** 64 - 1)
+    return f'?useless_int={rand()}'
 
 
 def chunks(collection, n):
@@ -48,7 +54,6 @@ class Subscriber:
 
     @classmethod
     async def get_subscriber_id_and_notification_channel(cls, subscriber):
-        log.debug(subscriber.__class__.__name__)
         if isinstance(subscriber, discord.User):
             subscriber_channel = await subscriber.create_dm()
             notification_channel_id = subscriber_channel.id

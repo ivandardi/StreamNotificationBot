@@ -3,10 +3,22 @@ import os
 import re
 from typing import Dict, Type
 
-from .service import Service, Streamer, chunks
+from .service import Service, Streamer, chunks, anticache
 from ...utils import errors
 
 log = logging.getLogger(__name__)
+
+
+def _get_service_id(api):
+    try:
+        service_id = api['channel']['_id']
+    except KeyError:
+        try:
+            service_id = api['_id']
+        except KeyError:
+            raise errors.UnexpectedApiError
+
+    return str(service_id)
 
 
 class TwitchStreamer(Streamer):
@@ -20,7 +32,8 @@ class TwitchStreamer(Streamer):
 
     @classmethod
     def from_api_response(cls, api, database):
-        service_id = str((api.get('channel', None) or api.get('_id', None))['_id'])
+        log.debug(api)
+        service_id = _get_service_id(api)
         database_streamer = database.get(service_id, None)
         streamer = cls(
             db_id=database_streamer.db_id if database_streamer else None,
@@ -36,7 +49,7 @@ class TwitchStreamer(Streamer):
 
     @property
     def thumbnail_url(self):
-        return self.api['preview']['large']
+        return self.api['preview']['large'] + anticache()
 
     @property
     def service_icon_url(self):

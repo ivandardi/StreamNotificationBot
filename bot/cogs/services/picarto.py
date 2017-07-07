@@ -3,9 +3,8 @@ import os
 import re
 from typing import Dict, Type
 
-from .service import Service, Streamer
+from .service import Service, Streamer, anticache
 from ...utils import errors
-
 log = logging.getLogger(__name__)
 
 
@@ -36,7 +35,7 @@ class PicartoStreamer(Streamer):
 
     @property
     def thumbnail_url(self):
-        return f'https://thumb.picarto.tv/thumbnail/{self.channel_name.lower()}.jpg'
+        return f'https://thumb.picarto.tv/thumbnail/{self.channel_name.lower()}.jpg' + anticache()
 
     @property
     def service_icon_url(self):
