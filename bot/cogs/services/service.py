@@ -315,6 +315,8 @@ class Service(ABC):
                 notification_embed = streamer.create_notification_embed()
                 try:
                     await channel.send(embed=notification_embed)
+                    log.info('Notified %s that streamer %s is online on %s',
+                             channel, streamer.channel_name, streamer.service_name)
                 except Exception as e:
                     log.exception('_notify_subscribers_of_streamer: %s', e)
             else:
