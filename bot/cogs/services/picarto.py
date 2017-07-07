@@ -75,7 +75,7 @@ class Picarto(Service):
     async def get_online_streamers(self) -> Dict[str, Streamer]:
         all_online_streamers = await self.get_all_online_streamers()
 
-        db = await self.database_cache()
+        db = await self.database_streamers()
         online_streamers = dict(
             PicartoStreamer.from_api_response(s, db)
             for s in all_online_streamers
@@ -91,7 +91,7 @@ class Picarto(Service):
             raise errors.StreamerNotFoundError(username)
         return PicartoStreamer.from_api_response(
             api=streamer,
-            database=await self.database_cache(),
+            database=await self.database_streamers(),
         )[1]
 
     async def get_all_online_streamers(self):

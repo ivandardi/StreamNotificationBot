@@ -87,7 +87,7 @@ class Twitch(Service):
     async def get_online_streamers(self) -> Dict[str, Streamer]:
 
         online_streamers = {}
-        db = await self.database_cache()
+        db = await self.database_streamers()
 
         TWITCH_MAX_LIMIT = 100
         streamer_batch = chunks(db, TWITCH_MAX_LIMIT)
@@ -118,7 +118,7 @@ class Twitch(Service):
         streamer = response['users'][0]
         return TwitchStreamer.from_api_response(
             api=streamer,
-            database=await self.database_cache(),
+            database=await self.database_streamers(),
         )[1]
 
     async def api_request(self, *, endpoint, params):

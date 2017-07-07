@@ -140,7 +140,6 @@ class Service(ABC):
         self.api_key = api_key
         self.update_period = update_period
         self.live_streamers_cache = {}
-        self._database_streamers_cache = None
         setattr(self, self.service_name, self._make_commands())
 
         self.task = self.bot.loop.create_task(self._notify_subscribers())
@@ -222,7 +221,6 @@ class Service(ABC):
         await self._add_subscription(subscriber, streamer)
 
     async def _add_subscription(self, subscriber: Subscriber, streamer: Streamer):
-        await self.database_cache_add(streamer)
         await self.bot.database.add_subscription(
             subscriber_id=subscriber.id,
             channel_id=subscriber.notification_channel_id,
@@ -243,7 +241,6 @@ class Service(ABC):
         await ctx.send(f'{subscriber.subscriber} unsubscribed to {username} successfully!')
 
     async def _del_subscription(self, subscriber: Subscriber, streamer_username: str):
-        await self.database_cache_del(streamer_username)
         await self.bot.database.del_subscription(
             subscriber_id=subscriber.id,
             service=self.service_name,
@@ -289,25 +286,12 @@ class Service(ABC):
                 await self.bot.database.delete_subscriber(channel.id)
                 log.info('Deleted subscriber channel %s from database', channel)
 
-    async def database_cache(self):
-        if self._database_streamers_cache is None:
-            database_streamers = await self.bot.database.get_all_streamers_from_service(service=self.service_name)
-            self._database_streamers_cache = {
-                s['service_id']: self.streamer_class.from_database_record(s) for s in database_streamers
-            }
-        return self._database_streamers_cache
-
-    async def database_cache_add(self, streamer: Streamer):
-        db = await self.database_cache()
-        db[streamer.service_id] = streamer
-
-    async def database_cache_del(self, streamer_username: str):
-        db = await self.database_cache()
-        log.debug(list(map(str, db)))
-        streamer = await self.get_streamer_from_API(streamer_username)
-        if streamer.service_id not in db:
-            raise errors.NotSubscribedError(streamer_username)
-        del db[streamer.service_id]
+    async def database_streamers(self):
+        database_streamers = await self.bot.database.get_all_streamers_from_service(service=self.service_name)
+        database_streamers = {
+            s['service_id']: self.streamer_class.from_database_record(s) for s in database_streamers
+        }
+        return database_streamers
 
     async def _notify_subscribers(self):
         for _ in range(1):
