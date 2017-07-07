@@ -101,6 +101,8 @@ class StreamNotificationBot(commands.Bot):
             return await ctx.send('This command cannot be used in private messages.')
         if isinstance(error, commands.DisabledCommand):
             return await ctx.send('Sorry. This command is disabled and cannot be used.')
+        if isinstance(error, commands.CommandNotFound):
+            return await ctx.send('Type `snb?help` for help on valid commands.')
         if isinstance(error, errors.StreamNotificationBotError):
             return log.error('StreamNotificationBotError: %s', error)
         log.error(f'Command error in %s:\n%s', ctx.command.qualified_name, error)
