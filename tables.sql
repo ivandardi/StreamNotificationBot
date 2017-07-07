@@ -17,3 +17,26 @@ CREATE TABLE IF NOT EXISTS subscriptions (
   streamer_id   INTEGER NOT NULL REFERENCES streamers   (streamer_id)   ON DELETE CASCADE,
   PRIMARY KEY (subscriber_id, streamer_id)
 );
+
+CREATE OR REPLACE FUNCTION delete_empty() RETURNS trigger AS
+$$
+BEGIN
+  IF (SELECT COUNT(*) FROM subscriptions WHERE subscriber_id = OLD.subscriber_id) = 0 THEN
+    DELETE FROM subscribers
+    WHERE subscribers.subscriber_id = OLD.subscriber_id;
+  END IF;
+
+  IF (SELECT COUNT(*) FROM subscriptions WHERE streamer_id = OLD.streamer_id) = 0 THEN
+    DELETE FROM streamers
+    WHERE streamers.streamer_id = OLD.streamer_id;
+  END IF;
+
+  RETURN OLD;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS empty_subscribers on subscriptions;
+CREATE TRIGGER empty_subscribers
+  AFTER DELETE
+  ON subscriptions
+  FOR EACH ROW EXECUTE PROCEDURE delete_empty();
