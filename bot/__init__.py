@@ -9,7 +9,7 @@ import aiohttp
 import discord
 from discord.ext import commands
 
-from .utils import Database, strings
+from .utils import Database, strings, errors
 
 
 def setup_logging():
@@ -101,6 +101,8 @@ class StreamNotificationBot(commands.Bot):
             return await ctx.send('This command cannot be used in private messages.')
         if isinstance(error, commands.DisabledCommand):
             return await ctx.send('Sorry. This command is disabled and cannot be used.')
+        if isinstance(error, errors.StreamNotificationBotError):
+            return log.error('StreamNotificationBotError: %s', error)
         log.error(f'Command error in %s:\n%s', ctx.command.qualified_name, error)
         traceback.print_tb(error.__traceback__)
 

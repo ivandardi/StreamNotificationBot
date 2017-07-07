@@ -21,8 +21,11 @@ class Meta:
         def is_me(m):
             return m.author.id == self.bot.user.id
 
-        deleted = await ctx.channel.purge(limit=limit, check=is_me)
-        await ctx.send(f'Deleted {len(deleted)} message(s)', delete_after=5)
+        try:
+            deleted = await ctx.channel.purge(limit=limit, check=is_me)
+            await ctx.send(f'Deleted {len(deleted)} message(s)', delete_after=5)
+        except discord.Forbidden:
+            await ctx.send('The bot needs the Manage Messages permission to execute this command!')
 
     @commands.command()
     async def uptime(self, ctx: commands.Context):
@@ -51,6 +54,7 @@ class Meta:
         perms.send_messages = True
         perms.embed_links = True
         perms.read_message_history = True
+        perms.manage_messages = True
 
         link = discord.utils.oauth_url(self.bot.user.id, permissions=perms)
         await ctx.send(f'Invite link: {link}')
