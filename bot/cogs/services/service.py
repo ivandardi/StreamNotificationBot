@@ -271,6 +271,9 @@ class Service(ABC):
         embed.set_author(name=f"Streamers you're subscribed to on {self.service_name.capitalize()}")
         return embed
 
+    async def on_private_channel_delete(self, channel: discord.abc.PrivateChannel):
+        await self._remove_channels_from_database(channel)
+
     async def on_guild_channel_delete(self, channel: discord.TextChannel):
         await self._remove_channels_from_database(channel)
 
