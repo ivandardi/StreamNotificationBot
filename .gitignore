@@ -1,6 +1,6 @@
 # Misc
 logs/
-.idea/
+.*/
 *.sqlite3
 *.json
 

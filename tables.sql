@@ -1,24 +1,19 @@
 CREATE TABLE IF NOT EXISTS subscribers (
-  subscriber_id TEXT PRIMARY KEY,
-  channel_id    TEXT NOT NULL
+  subscriber_id BIGINT PRIMARY KEY,
+  channel_id    BIGINT NOT NULL,
+  UNIQUE (subscriber_id, channel_id)
 );
 
 CREATE TABLE IF NOT EXISTS streamers (
-  streamer_id INTEGER PRIMARY KEY AUTOINCREMENT,
+  streamer_id SERIAL  PRIMARY KEY,
   service_id  TEXT    NOT NULL,
   service     TEXT    NOT NULL,
   username    TEXT    NOT NULL,
-  is_online   INTEGER NOT NULL CHECK (is_online IN (0, 1)) DEFAULT 0,
   UNIQUE (service, username)
 );
 
 CREATE TABLE IF NOT EXISTS subscriptions (
-  subscriber_id TEXT    REFERENCES subscribers (subscriber_id),
-  streamer_id   INTEGER REFERENCES streamers   (streamer_id),
+  subscriber_id BIGINT  NOT NULL REFERENCES subscribers (subscriber_id) ON DELETE CASCADE,
+  streamer_id   INTEGER NOT NULL REFERENCES streamers   (streamer_id)   ON DELETE CASCADE,
   PRIMARY KEY (subscriber_id, streamer_id)
-);
-
-CREATE TABLE IF NOT EXISTS prefixes (
-  guild_id TEXT NOT NULL PRIMARY KEY,
-  prefix   TEXT NOT NULL
 );

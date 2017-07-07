@@ -1,4 +1,4 @@
-# Stream Notification Bot
+# Stream Notification Bot v2.0.0
 
 A bot that notifies you when your favorite streamers go online!
 
@@ -9,30 +9,34 @@ A bot that notifies you when your favorite streamers go online!
 
 ## Usage and examples
 
-* Subscribe to a streamer
-    * `snb?add <service> <username>`
-    * Example: `snb?add picarto mykegreywolf`
+* Subscribing to streamers:
+    * `snb?{service} add username`
+    * Example: `snb?{service} add mykegreywolf`
 
-* Unsubscribe from a streamer
-    * `snb?del <service> <username>`
-    * Example: `snb?del picarto mykegreywolf`
+* Subscribing a channel to streamers:
+    * `snb?{service} add username channel`
+    * Example: `snb?{service} add mykegreywolf #general`
     
-* List subscribed streamers
-    * `snb?list`
-    
-* Subscribe a channel to a streamer
-    * `snb?add <service> <username> <channel>`
-    * Example: `snb?add picarto mykegreywolf #general`
+* Unsubscribing to streamers:
+    * `snb?{service} del username`
+    * Example: `snb?{service} del mykegreywolf`
 
-* Unsubscribe a channel from a streamer
-    * `snb?del <service> <username> <channel>`
-    * Example: `snb?del picarto mykegreywolf #general`
+* Unsubscribing a channel to streamers:
+    * `snb?{service} del username channel`
+    * Example: `snb?{service} del mykegreywolf #general`
     
-* List subscribed streamers of a channel
-    * `snb?list #general`
+* Listing your streamers:
+    * `snb?{service} list`
+    * `Example: snb?{service} list`
 
-For more help about any command, type `snb?help <command>`.
-Examples:
-* `snb?help add`
-* `snb?help del`
-* `snb?help list`
+* Listing a channel's streamers:
+    * `snb?{service} list channel`
+    * Example: `snb?{service} list #general`
+    
+## Running the bot
+
+To invoke the bot, be in the root directory and execute
+
+```
+TOKEN_DISCORD=token TOKEN_TWITCH=token TOKEN_PICARTO=token python3.6 -m bot
+```
