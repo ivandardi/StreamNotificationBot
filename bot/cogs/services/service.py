@@ -155,6 +155,8 @@ class Service(ABC):
                 await ctx.send(f'Invalid username: {str(original)}')
             if isinstance(original, errors.StreamerNotFoundError):
                 await ctx.send(f'Streamer not found: {str(original)}')
+            if isinstance(original, errors.NotSubscribedError):
+                await ctx.send(f"You're not subscriber to the streamer {str(original)}")
             if isinstance(original, errors.StreamerAlreadyExists):
                 await ctx.send("You're already subscribed to this streamer!")
             if isinstance(original, errors.InvalidChannelError):
@@ -301,9 +303,10 @@ class Service(ABC):
 
     async def database_cache_del(self, streamer_username: str):
         db = await self.database_cache()
-        streamer = discord.utils.find(lambda s: s.channel_name == streamer_username, db.values())
-        if not streamer:
-            raise errors.StreamerNotFoundError(streamer_username)
+        log.debug(list(map(str, db)))
+        streamer = await self.get_streamer_from_API(streamer_username)
+        if streamer.service_id not in db:
+            raise errors.NotSubscribedError(streamer_username)
         del db[streamer.service_id]
 
     async def _notify_subscribers(self):

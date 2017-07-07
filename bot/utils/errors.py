@@ -14,6 +14,10 @@ class StreamerAlreadyExists(StreamNotificationBotError):
     pass
 
 
+class NotSubscribedError(StreamNotificationBotError):
+    pass
+
+
 class InvalidChannelError(StreamNotificationBotError):
     pass
 
