@@ -29,7 +29,7 @@ def setup_logging():
     stream_handler.setFormatter(formatter)
 
     logger = logging.getLogger(__name__)
-    logger.setLevel(logging.DEBUG)
+    logger.setLevel(logging.INFO)
 
     logger.addHandler(rotating_handler)
     logger.addHandler(stream_handler)
@@ -83,7 +83,7 @@ class StreamNotificationBot(commands.Bot):
                 print(f'Failed to load extension {extension}\n{type(e).__name__}: {e}')
 
     async def logout(self):
-        log.debug('Logging out...')
+        log.info('Logging out...')
         await self.database.close()
         await self.session.close()
         await super().logout()

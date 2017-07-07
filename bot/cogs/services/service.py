@@ -54,7 +54,6 @@ class Subscriber:
 
     @classmethod
     async def get_subscriber_id_and_notification_channel(cls, subscriber):
-        log.debug(subscriber.__class__.__name__)
         if isinstance(subscriber, (discord.User, discord.Member)):
             subscriber_channel = await subscriber.create_dm()
             notification_channel_id = subscriber_channel.id
@@ -294,7 +293,7 @@ class Service(ABC):
         return database_streamers
 
     async def _notify_subscribers(self):
-        for _ in range(1):
+        while not self.bot.is_closed():
             await self.bot.wait_until_ready()
             try:
                 log.debug('Checking %s streamers', self.service_name)
