@@ -1,11 +1,10 @@
 import logging
 import os
 import re
-from functools import lru_cache
 from typing import Dict, Type
 
 from .service import Service, Streamer, anticache
-from ...utils import errors
+from ...utils import errors, async_cache
 
 log = logging.getLogger(__name__)
 
@@ -85,7 +84,7 @@ class Picarto(Service):
 
         return online_streamers
 
-    @lru_cache()
+    @async_cache()
     async def get_streamer_from_API(self, username: str) -> PicartoStreamer:
         streamer = await self.get_channel_by_name(username)
         if not streamer:
@@ -102,7 +101,7 @@ class Picarto(Service):
         }
         return await self.api_request(endpoint='/online', params=params)
 
-    @lru_cache()
+    @async_cache()
     async def get_channel_by_name(self, username: str):
         return await self.api_request(endpoint=f'/channel/name/{username}')
 
