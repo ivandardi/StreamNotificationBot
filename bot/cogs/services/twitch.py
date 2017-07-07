@@ -1,6 +1,7 @@
 import logging
 import os
 import re
+from functools import lru_cache
 from typing import Dict, Type
 
 from .service import Service, Streamer, chunks, anticache
@@ -108,6 +109,7 @@ class Twitch(Service):
 
         return online_streamers
 
+    @lru_cache()
     async def get_streamer_from_API(self, username: str) -> TwitchStreamer:
         params = {
             'login': username,
