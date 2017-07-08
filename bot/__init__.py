@@ -105,8 +105,10 @@ class StreamNotificationBot(commands.Bot):
             return await ctx.send('Type `snb?help` for help on valid commands.')
         if isinstance(error, errors.StreamNotificationBotError):
             return log.error('StreamNotificationBotError: %s', error)
-        log.error(f'Command error in %s:\n%s', ctx.command.qualified_name, error)
-        traceback.print_tb(error.__traceback__)
+        if isinstance(error, commands.CommandInvokeError):
+            return log.error('CommandInvokeError: %s', error)
+        tb = ''.join(traceback.format_exception(type(error), error, error.__traceback__))
+        log.error(f'Command error in %s:\n%s', ctx.command.qualified_name, tb)
 
     async def on_command(self, ctx):
         if isinstance(ctx.channel, discord.abc.PrivateChannel):
