@@ -26,17 +26,6 @@ class Admin:
 
         await self.bot.change_presence(game=discord.Game(name=status))
 
-    @commands.command(hidden=True)
-    @commands.is_owner()
-    async def info(self, ctx: commands.Context):
-        """Provide some info about the bot.
-
-        Currently only provides the guilds that the bot is in.
-        """
-
-        await ctx.send(f'Currently in {len(self.bot.guilds)} servers!')
-        await ctx.send('\n'.join([guild.name for guild in self.bot.guilds]))
-
     @commands.command(name='reload', hidden=True)
     @commands.is_owner()
     async def _reload(self, ctx, *, ext: str = None):
