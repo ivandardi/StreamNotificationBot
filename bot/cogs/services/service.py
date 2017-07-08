@@ -310,7 +310,7 @@ class Service(ABC):
     async def _notify_subscribers_of_streamer(self, streamer: Streamer):
         subscribers = await self.bot.database.get_subscribers_from_streamer(streamer.db_id)
         for (notification_channel_id,) in subscribers:
-            channel = self.bot.get_channel(notification_channel_id)
+            channel = await self._get_channel(notification_channel_id)
             if channel:
                 notification_embed = streamer.create_notification_embed()
                 try:
@@ -321,6 +321,28 @@ class Service(ABC):
                     log.exception('_notify_subscribers_of_streamer: %s', e)
             else:
                 log.error('Notification channel not found: %s', notification_channel_id)
+
+    async def _get_channel(self, notification_channel_id):
+        for i in range(5):
+            channel = self.bot.get_channel(notification_channel_id)
+            if channel:
+                return channel
+
+        # channel could not be obtained via the .get_channel function
+        # try other methods
+
+        def is_the_channel(c):
+            return c.id == notification_channel_id
+
+        channel = discord.utils.find(is_the_channel, self.bot.private_channels)
+        if channel:
+            return channel
+
+        channel = discord.utils.find(is_the_channel, self.bot.get_all_channels())
+        if channel:
+            return channel
+
+        return None
 
     @abstractmethod
     async def get_online_streamers(self) -> Dict[str, Streamer]:
