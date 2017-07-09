@@ -20,6 +20,10 @@ Bot server for announcements, complaints, feedback and suggestions: https://disc
 Currently supported services:
   - Twitch
   - Picarto
+  
+Note that to manage a Discord channel subscription, you need one of the following:
+  - The "Manage Channels" permission
+  - The "Notification Manager" role
 
 ==== HOW TO USE THE BOT ====
 
