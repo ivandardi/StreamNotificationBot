@@ -318,11 +318,11 @@ class Service(ABC):
                 try:
                     await subscriber.send(embed=notification_embed)
                     log.info('Notified %s that streamer %s is online on %s',
-                             subscriber.subscriber, streamer.channel_name, streamer.service_name)
+                             subscriber, streamer.channel_name, streamer.service_name)
                 except Exception as e:
                     log.exception('_notify_subscribers_of_streamer: %s', e)
             else:
-                log.error('Subscriber not found: %s %s', subscriber_id, subscriber.subscriber)
+                log.error('Subscriber not found: %s %s', subscriber_id, subscriber)
 
     async def _get_subscriber(self, subscriber_id) -> Optional[Subscriber]:
         channel = self.bot.get_channel(subscriber_id)
