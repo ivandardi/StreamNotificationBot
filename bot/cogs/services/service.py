@@ -38,9 +38,10 @@ async def validate_notification_channel(ctx, channel: discord.abc.GuildChannel):
     if not ctx.guild:
         raise errors.InvalidChannelError("This command doesn't work here.")
 
-    # Only people with manage_channels can subscribe channels
+    # Only people with manage_channels or with the Notification Manager role can subscribe channels
     perms = channel.permissions_for(ctx.author)
-    if not perms.manage_channels:
+    role = discord.utils.find(lambda r: r.name == 'Notification Manager', ctx.author.roles)
+    if not role and not perms.manage_channels:
         raise errors.InvalidChannelError("You don't have the Manage Channels permission to subscribe the channel.")
 
     return channel
