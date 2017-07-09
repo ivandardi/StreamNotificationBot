@@ -26,20 +26,16 @@ class Database:
     async def close(self):
         await self.pool.close()
 
-    async def add_subscription(self, *, subscriber_id: int, channel_id: int, service: str, username: str,
-                               service_id: str):
+    async def add_subscription(self, *, subscriber_id: int, service: str, username: str, service_id: str):
         """Adds a new subscription
 
         :param service_id: the internal ID of the streamer in whichever service they're in
         :param subscriber_id: Subscriber id
-        :param channel_id: ID of the channel where the notification will be sent
         :param service: Streaming service of the user
         :param username: Username of the user
         """
 
         async with self.pool.acquire() as con:
-            async with con.transaction():
-                await con.execute(self.sql['insert_subscribers'], subscriber_id, channel_id)
             async with con.transaction():
                 record = await con.fetchrow(self.sql['insert_streamers'], username, service, service_id)
                 streamer_id = record['streamer_id']
@@ -62,6 +58,14 @@ class Database:
             async with con.transaction():
                 await con.execute(self.sql['del_subscription'], service, username, subscriber_id)
 
+    async def delete_subscriber(self, *, subscriber_id: int):
+        """Deletes all subscriptions from a subscriber
+
+        :param subscriber_id: Subscriber id
+        """
+        async with self.pool.acquire() as con:
+            await con.execute(self.sql['delete_subscriber'], subscriber_id)
+
     async def get_all_streamers_from_service(self, *, service: str):
         """Returns all streamers related to a service
 
@@ -70,21 +74,6 @@ class Database:
         """
         async with self.pool.acquire() as con:
             return await con.fetch(self.sql['get_all_streamers_from_service'], service)
-
-    async def get_all_subscribers(self):
-        """Returns all the subscribers
-
-        :return: Iterable of IDs of the subscribers
-        """
-        sql = self.sql['get_all_subscribers']
-        async with self.pool.acquire() as con:
-            return await con.fetch(sql)
-
-    async def delete_subscriber(self, subscriber_id: int):
-        """Delete a subscriber
-        """
-        async with self.pool.acquire() as con:
-            await con.execute(self.sql['delete_subscriber'], subscriber_id)
 
     async def get_subscribers_from_streamer(self, streamer_id: str):
         """Returns all the subscribers that are subscribed to a streamer
@@ -99,6 +88,7 @@ class Database:
         """Returns all the streamers that the subscriber is subscribed to
 
         :param subscriber_id: ID of the subscriber
+        :param service: The service that the subscriber is referring to
         :return: Iterable of (username, service) of all the streamers that the subscriber is currently subscribed to
         """
         async with self.pool.acquire() as con:

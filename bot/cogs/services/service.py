@@ -3,7 +3,7 @@ import itertools
 import logging
 import random
 from abc import ABC, abstractmethod
-from typing import Dict, Type
+from typing import Dict, Type, Optional
 
 import discord
 from discord.ext import commands
@@ -48,21 +48,20 @@ async def validate_notification_channel(ctx, channel: discord.abc.GuildChannel):
 
 
 class Subscriber:
-    def __init__(self, subscriber, notification_channel_id):
+    def __init__(self, subscriber):
+        if not isinstance(subscriber, (discord.User, discord.Member, discord.TextChannel)):
+            raise ValueError("Passed subscriber isn't an User nor a TextChannel")
         self.subscriber = subscriber
         self.id = self.subscriber.id
-        self.notification_channel_id = notification_channel_id
 
-    @classmethod
-    async def get_subscriber_id_and_notification_channel(cls, subscriber):
-        if isinstance(subscriber, (discord.User, discord.Member)):
-            subscriber_channel = await subscriber.create_dm()
-            notification_channel_id = subscriber_channel.id
-            return cls(subscriber, notification_channel_id)
-        if isinstance(subscriber, discord.TextChannel):
-            notification_channel_id = subscriber.id
-            return cls(subscriber, notification_channel_id)
-        raise ValueError("Passed subscriber isn't an User nor a TextChannel")
+    def __repr__(self):
+        return repr(self.subscriber)
+
+    def __str__(self):
+        return str(self.subscriber)
+
+    async def send(self, *args, **kwargs):
+        await self.subscriber.send(*args, **kwargs)
 
 
 class Streamer(ABC):
@@ -211,10 +210,10 @@ class Service(ABC):
         username = await self.validate_username(username)
         channel = await validate_notification_channel(ctx, channel)
         async with ctx.typing():
-            subscriber = await Subscriber.get_subscriber_id_and_notification_channel(channel or ctx.author)
+            subscriber = Subscriber(channel or ctx.author)
             await self._subscribe_to_streamer(subscriber, username)
 
-        await ctx.send(f'{subscriber.subscriber} subscribed to {username} successfully!')
+        await ctx.send(f'{subscriber} subscribed to {username} successfully!')
 
     async def _subscribe_to_streamer(self, subscriber: Subscriber, username: str):
         streamer = await self.get_streamer_from_API(username)
@@ -223,7 +222,6 @@ class Service(ABC):
     async def _add_subscription(self, subscriber: Subscriber, streamer: Streamer):
         await self.bot.database.add_subscription(
             subscriber_id=subscriber.id,
-            channel_id=subscriber.notification_channel_id,
             service=self.service_name,
             username=streamer.channel_name.lower(),
             service_id=streamer.service_id,
@@ -235,10 +233,10 @@ class Service(ABC):
         username = await self.validate_username(username)
         channel = await validate_notification_channel(ctx, channel)
         async with ctx.typing():
-            subscriber = await Subscriber.get_subscriber_id_and_notification_channel(channel or ctx.author)
+            subscriber = Subscriber(channel or ctx.author)
             await self._del_subscription(subscriber, username)
 
-        await ctx.send(f'{subscriber.subscriber} unsubscribed to {username} successfully!')
+        await ctx.send(f'{subscriber} unsubscribed to {username} successfully!')
 
     async def _del_subscription(self, subscriber: Subscriber, streamer_username: str):
         await self.bot.database.del_subscription(
@@ -250,11 +248,11 @@ class Service(ABC):
     @staticmethod
     async def _list_command(self, ctx, channel: discord.TextChannel = None):
         """list command"""
-        subscriber = await Subscriber.get_subscriber_id_and_notification_channel(channel or ctx.author)
         channel = await validate_notification_channel(ctx, channel)
+        subscriber = Subscriber(channel or ctx.author)
         async with ctx.typing():
             streamers = await self.bot.database.get_subscriptions_from_subscriber(subscriber.id, self.service_name)
-            embed = self._make_list_embed(streamers, subscriber.subscriber)
+            embed = self._make_list_embed(streamers, subscriber)
 
         await ctx.send(embed=embed)
 
@@ -272,12 +270,15 @@ class Service(ABC):
         return embed
 
     async def on_private_channel_delete(self, channel: discord.abc.PrivateChannel):
+        log.info('Private channel deleted')
         await self._remove_channels_from_database(channel)
 
     async def on_guild_channel_delete(self, channel: discord.TextChannel):
+        log.info('Guild channel deleted')
         await self._remove_channels_from_database(channel)
 
     async def on_guild_remove(self, guild: discord.Guild):
+        log.info('Guild deleted')
         await self._remove_channels_from_database(*guild.channels)
 
     async def _remove_channels_from_database(self, *channels):
@@ -310,40 +311,38 @@ class Service(ABC):
 
     async def _notify_subscribers_of_streamer(self, streamer: Streamer):
         subscribers = await self.bot.database.get_subscribers_from_streamer(streamer.db_id)
-        for subscriber_id, notification_channel_id in subscribers:
-            channel = await self._get_channel(subscriber_id, notification_channel_id)
-            if channel:
+        for (subscriber_id,) in subscribers:
+            subscriber = await self._get_subscriber(subscriber_id)
+            if subscriber:
                 notification_embed = streamer.create_notification_embed()
                 try:
-                    await channel.send(embed=notification_embed)
+                    await subscriber.send(embed=notification_embed)
                     log.info('Notified %s that streamer %s is online on %s',
-                             channel, streamer.channel_name, streamer.service_name)
+                             subscriber.subscriber, streamer.channel_name, streamer.service_name)
                 except Exception as e:
                     log.exception('_notify_subscribers_of_streamer: %s', e)
             else:
-                log.error('Notification channel not found: %s', notification_channel_id)
+                log.error('Subscriber not found: %s %s', subscriber_id, subscriber.subscriber)
 
-    async def _get_channel(self, subscriber_id, notification_channel_id):
-        channel = self.bot.get_channel(notification_channel_id)
+    async def _get_subscriber(self, subscriber_id) -> Optional[Subscriber]:
+        channel = self.bot.get_channel(subscriber_id)
         if channel:
-            return channel
+            return Subscriber(channel)
 
         user = self.bot.get_user(subscriber_id)
         if user:
-            channel = await user.create_dm()
-            if channel:
-                return channel
+            return Subscriber(user)
 
         def is_the_channel(c):
-            return c.id == notification_channel_id
+            return c.id == subscriber_id
 
         channel = discord.utils.find(is_the_channel, self.bot.private_channels)
         if channel:
-            return channel
+            return Subscriber(channel)
 
         channel = discord.utils.find(is_the_channel, self.bot.get_all_channels())
         if channel:
-            return channel
+            return Subscriber(channel)
 
         return None
 

@@ -1,10 +1,4 @@
 [database]
-insert_subscribers = '''
-INSERT INTO subscribers (subscriber_id, channel_id)
-VALUES ($1, $2)
-ON CONFLICT DO NOTHING
-'''
-
 insert_streamers = '''
 WITH to_insert AS (
    INSERT INTO streamers AS entries (username, service, service_id)
@@ -34,28 +28,20 @@ WHERE streamer_id IN (
 AND subscriber_id = $3
 '''
 
+delete_subscriber = '''
+DELETE FROM subscriptions
+WHERE subscriber_id = $1
+'''
+
 get_all_streamers_from_service = '''
 SELECT *
   FROM streamers
  WHERE service = $1
 '''
 
-get_all_subscribers = '''
-SELECT *
-  FROM subscribers
-'''
-
-delete_subscriber = '''
-DELETE FROM subscribers
-WHERE subscriber_id = $1
-'''
-
 get_subscribers_from_streamer = '''
-SELECT subscriber_id,
-       channel_id
-  FROM subscribers
-       INNER JOIN subscriptions
-       USING (subscriber_id)
+SELECT subscriber_id
+  FROM subscriptions
        INNER JOIN streamers
        USING (streamer_id)
  WHERE streamer_id = $1
@@ -63,10 +49,8 @@ SELECT subscriber_id,
 
 get_subscriptions_from_subscriber = '''
 SELECT username
-  FROM subscriptions
-       INNER JOIN subscribers
-       USING (subscriber_id)
-       INNER JOIN streamers
+  FROM streamers
+       INNER JOIN subscriptions
        USING (streamer_id)
  WHERE subscriber_id = $1
    AND service = $2

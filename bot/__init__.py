@@ -29,7 +29,7 @@ def setup_logging():
     stream_handler.setFormatter(formatter)
 
     logger = logging.getLogger(__name__)
-    logger.setLevel(logging.INFO)
+    logger.setLevel(logging.DEBUG)
 
     logger.addHandler(rotating_handler)
     logger.addHandler(stream_handler)
