@@ -3,7 +3,7 @@ import itertools
 import logging
 import random
 from abc import ABC, abstractmethod
-from typing import Dict, Type, Optional
+from typing import Dict, Type, Optional, Union
 
 import discord
 from discord.ext import commands
@@ -92,7 +92,7 @@ class Streamer(ABC):
         embed.set_image(url=self.thumbnail_url)
         embed.set_thumbnail(url=self.avatar_url)
         embed.set_footer(text=self.service_name.capitalize())
-        embed.add_field(name='Viewers', value=self.channel_viewers)
+        embed.add_field(name='Viewers', value=str(self.channel_viewers))
 
         return embed
 
@@ -101,32 +101,32 @@ class Streamer(ABC):
 
     @property
     @abstractmethod
-    def service_name(self):
+    def service_name(self) -> str:
         pass
 
     @property
     @abstractmethod
-    def thumbnail_url(self):
+    def thumbnail_url(self) -> str:
         pass
 
     @property
     @abstractmethod
-    def service_icon_url(self):
+    def service_icon_url(self) -> str:
         pass
 
     @property
     @abstractmethod
-    def stream_url(self):
+    def stream_url(self) -> str:
         pass
 
     @property
     @abstractmethod
-    def avatar_url(self):
+    def avatar_url(self) -> str:
         pass
 
     @property
     @abstractmethod
-    def channel_viewers(self):
+    def channel_viewers(self) -> Union[int, str]:
         pass
 
 
