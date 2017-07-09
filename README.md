@@ -1,4 +1,4 @@
-# Stream Notification Bot v2.0.0
+# Stream Notification Bot v2.1.0
 
 A bot that notifies you when your favorite streamers go online!
 
@@ -32,7 +32,11 @@ A bot that notifies you when your favorite streamers go online!
 * Listing a channel's streamers:
     * `snb?{service} list channel`
     * Example: `snb?{service} list #general`
-    
+
+Note that to manage a Discord channel subscription, you need one of the following:
+  - The "Manage Channels" permission
+  - The "Notification Manager" role
+
 ## Running the bot
 
 To invoke the bot, be in the root directory and execute

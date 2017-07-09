@@ -67,6 +67,7 @@ def get_prefix(bot, msg):
 class StreamNotificationBot(commands.Bot):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.version = '2.1.0'
         self.uptime = datetime.datetime.utcnow()
         self.database = kwargs['database']
         self.session = aiohttp.ClientSession(loop=self.loop)

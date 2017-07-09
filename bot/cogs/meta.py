@@ -1,7 +1,6 @@
 import datetime
 import logging
 import os
-from collections import Counter
 
 import discord.utils
 from discord.ext import commands
@@ -64,12 +63,6 @@ class Meta:
         link = discord.utils.oauth_url(self.bot.user.id, permissions=perms)
         await ctx.send(f'Invite link: {link}')
 
-    @commands.command()
-    async def version(self, ctx: commands.Context):
-        """Tell the version of the bot"""
-
-        await ctx.send('The StreamNotificationBot is currently in version 2.0.0')
-
     @commands.command(aliases=['info', 'source'])
     async def about(self, ctx: commands.Context):
         """Tells you information about the bot itself."""
@@ -107,6 +100,7 @@ class Meta:
         embed.add_field(name='Channels', value=f'{text} total')
         embed.add_field(name='Guilds', value=len(self.bot.guilds))
         embed.add_field(name='Uptime', value=self._bot_uptime())
+        embed.add_field(name='Bot Version', value=self.bot.version)
 
         await ctx.send(embed=embed)
 
