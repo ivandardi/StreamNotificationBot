@@ -98,6 +98,9 @@ class Twitch(Service):
                 'offset': TWITCH_MAX_LIMIT * i,
             }
             response = await self.api_request(endpoint='/streams', params=params)
+            if 'streams' not in response:
+                log.error(response)
+                continue
             for s in response['streams']:
                 service_id, streamer = TwitchStreamer.from_api_response(
                     api=s,
@@ -114,6 +117,7 @@ class Twitch(Service):
         }
         response = await self.api_request(endpoint='/users', params=params)
         if response['_total'] != 1:
+            log.error(response)
             raise errors.StreamerNotFoundError(username)
         streamer = response['users'][0]
         return TwitchStreamer.from_api_response(
