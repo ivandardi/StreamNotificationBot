@@ -305,7 +305,7 @@ class Service(ABC):
                         await self._notify_subscribers_of_streamer(streamer)
                 self.live_streamers_cache = currently_online_streamers
             except Exception as e:  # noqa
-                log.exception('notify_subscribers: %s', e)
+                log.exception('_notify_subscribers: %s', e)
 
             await asyncio.sleep(self.update_period)
 
@@ -319,10 +319,14 @@ class Service(ABC):
                     await subscriber.send(embed=notification_embed)
                     log.info('Notified %s that streamer %s is online on %s',
                              subscriber, streamer.channel_name, streamer.service_name)
+                except discord.Forbidden as e:
+                    log.exception('_notify_subscribers_of_streamer: No permissions to send the message.\n%s', e)
+                except discord.HTTPException as e:
+                    log.exception('_notify_subscribers_of_streamer: Sending the message failed.\n%s', e)
                 except Exception as e:
-                    log.exception('_notify_subscribers_of_streamer: %s', e)
+                    log.exception('_notify_subscribers_of_streamer: General exception.\n%s', e)
             else:
-                log.error('Subscriber not found: %s %s', subscriber_id, subscriber)
+                log.error('_notify_subscribers_of_streamer: Subscriber not found: %s', subscriber_id)
 
     async def _get_subscriber(self, subscriber_id) -> Optional[Subscriber]:
         channel = self.bot.get_channel(subscriber_id)
