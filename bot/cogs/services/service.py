@@ -271,21 +271,21 @@ class Service(ABC):
 
     async def on_private_channel_delete(self, channel: discord.abc.PrivateChannel):
         log.info('Private channel deleted')
-        await self._remove_channels_from_database(channel)
+        await self._remove_channels_from_database([channel])
 
     async def on_guild_channel_delete(self, channel: discord.TextChannel):
         log.info('Guild channel deleted')
-        await self._remove_channels_from_database(channel)
+        await self._remove_channels_from_database([channel])
 
     async def on_guild_remove(self, guild: discord.Guild):
         log.info('Guild deleted')
-        await self._remove_channels_from_database(*guild.channels)
+        await self._remove_channels_from_database(guild.channels)
 
-    async def _remove_channels_from_database(self, *channels):
+    async def _remove_channels_from_database(self, channels):
         for channel in channels:
-            if isinstance(channel, discord.TextChannel):
-                await self.bot.database.delete_subscriber(channel.id)
-                log.info('Deleted subscriber channel %s from database', channel)
+            log.info('Deleting subscriber channel %s (%s) from database...', channel, channel.id)
+            await self.bot.database.delete_subscriber(channel.id)
+            log.info('Deletion successful: %s (%s)', channel, channel.id)
 
     async def database_streamers(self):
         database_streamers = await self.bot.database.get_all_streamers_from_service(service=self.service_name)
