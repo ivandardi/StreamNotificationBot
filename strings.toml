@@ -88,3 +88,18 @@ Listing a channel's streamers:
     Example: snb?{service} list #general
 """
 
+enable_command_help = """
+Enabling your notifications:
+    snb?{service} enable
+
+Enabling a channel's notifications:
+    snb?{service} enable #general
+"""
+
+disable_command_help = """
+Disabling your notifications:
+    snb?{service} disable
+
+Disabling a channel's notifications:
+    snb?{service} disable #general
+"""

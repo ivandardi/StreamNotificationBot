@@ -139,6 +139,7 @@ class Service(ABC):
         self.api_key = api_key
         self.update_period = update_period
         self.live_streamers_cache = {}
+        self.disabled_users = set()
         setattr(self, self.service_name, self._make_commands())
 
         self.task = self.bot.loop.create_task(self._notify_subscribers())
@@ -189,6 +190,20 @@ class Service(ABC):
             name='list',
             callback=self._list_command,
             help=self._make_help_string(strings.list_command_help),
+        )
+        cmd.instance = self
+        group.add_command(cmd)
+        cmd = commands.Command(
+            name='enable',
+            callback=self._enable_command,
+            help=self._make_help_string(strings.enable_command_help),
+        )
+        cmd.instance = self
+        group.add_command(cmd)
+        cmd = commands.Command(
+            name='disable',
+            callback=self._disable_command,
+            help=self._make_help_string(strings.disable_command_help),
         )
         cmd.instance = self
         group.add_command(cmd)
@@ -269,6 +284,20 @@ class Service(ABC):
         embed.set_author(name=f"{self.service_name.capitalize()} subscriptions for {subscriber}")
         return embed
 
+    @staticmethod
+    async def _enable_command(self, ctx, channel: discord.TextChannel = None):
+        channel = await validate_notification_channel(ctx, channel)
+        subscriber = Subscriber(channel or ctx.author)
+        self.disabled_users.discard(subscriber.id)
+        await ctx.send(f'{subscriber.subscriber} has notifications enabled.')
+
+    @staticmethod
+    async def _disable_command(self, ctx, channel: discord.TextChannel = None):
+        channel = await validate_notification_channel(ctx, channel)
+        subscriber = Subscriber(channel or ctx.author)
+        self.disabled_users.add(subscriber.id)
+        await ctx.send(f'{subscriber.subscriber} has notifications disabled.')
+
     async def on_private_channel_delete(self, channel: discord.abc.PrivateChannel):
         log.info('Private channel deleted')
         await self._remove_channels_from_database([channel])
@@ -312,6 +341,8 @@ class Service(ABC):
     async def _notify_subscribers_of_streamer(self, streamer: Streamer):
         subscribers = await self.bot.database.get_subscribers_from_streamer(streamer.db_id)
         for (subscriber_id,) in subscribers:
+            if subscriber_id in self.disabled_users:
+                continue
             subscriber = await self._get_subscriber(subscriber_id)
             if subscriber:
                 notification_embed = streamer.create_notification_embed()
