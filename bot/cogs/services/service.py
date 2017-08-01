@@ -284,7 +284,7 @@ class Service(ABC):
     async def _remove_channels_from_database(self, channels):
         for channel in channels:
             log.info('Deleting subscriber channel %s (%s) from database...', channel, channel.id)
-            await self.bot.database.delete_subscriber(channel.id)
+            await self.bot.database.delete_subscriber(subscriber_id=channel.id)
             log.info('Deletion successful: %s (%s)', channel, channel.id)
 
     async def database_streamers(self):
