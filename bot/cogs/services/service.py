@@ -328,7 +328,7 @@ class Service(ABC):
             else:
                 log.error('_notify_subscribers_of_streamer: Subscriber not found: %s', subscriber_id)
 
-    async def _get_subscriber(self, subscriber_id) -> Optional[Subscriber]:
+    async def _get_subscriber(self, subscriber_id: int) -> Optional[Subscriber]:
         channel = self.bot.get_channel(subscriber_id)
         if channel:
             return Subscriber(channel)
@@ -337,18 +337,19 @@ class Service(ABC):
         if user:
             return Subscriber(user)
 
-        def is_the_channel(c):
-            return c.id == subscriber_id
-
-        channel = discord.utils.find(is_the_channel, self.bot.private_channels)
+        channel = discord.utils.get(self.bot.private_channels, id=subscriber_id)
         if channel:
             return Subscriber(channel)
 
-        channel = discord.utils.find(is_the_channel, self.bot.get_all_channels())
+        channel = discord.utils.get(self.bot.get_all_channels(), id=subscriber_id)
         if channel:
             return Subscriber(channel)
 
-        return None
+        # we tried. if we reach here, we might as well remove the subscriber
+        # from the database
+        log.info('Deleting subscriber %s from database...', subscriber_id)
+        await self.bot.database.delete_subscriber(subscriber_id=subscriber_id)
+        log.info('Deletion successful: %s', subscriber_id)
 
     @abstractmethod
     async def get_online_streamers(self) -> Dict[str, Streamer]:
