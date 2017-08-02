@@ -1,4 +1,4 @@
-# Stream Notification Bot v2.1.1
+# Stream Notification Bot v2.2.0
 
 A bot that notifies you when your favorite streamers go online!
 
