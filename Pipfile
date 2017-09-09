@@ -1,0 +1,14 @@
+[[source]]
+url = "https://pypi.python.org/simple"
+verify_ssl = true
+
+[packages]
+aiohttp = ">=2.2.5"
+asyncpg = ">=0.12.0"
+pytoml = ">=0.1.14"
+websockets = "*"
+
+[packages."discord.py"]
+git = "https://github.com/rapptz/discord.py.git"
+editable = true
+ref = "rewrite"
